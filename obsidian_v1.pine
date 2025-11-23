@@ -1,0 +1,226 @@
+//@version=6
+indicator("Obsidian", shorttitle="OBS", overlay=true)
+
+// ══════════════════════════════════════════════════════════════════════════════
+// OBSIDIAN - TradingView All-in-One Indicator
+// Phase 1: Watermark Foundation
+//
+// Purpose: Clean, customizable watermark with foundation for future ICT features
+// Version: 1.0.0
+// Author: Generated via Claude Code
+// Date: 2025-11-23
+//
+// Phase 1 Features:
+// - Customizable watermark overlay
+// - Symbol and timeframe display
+// - Custom notes support
+// - Full style customization (color, size, position, transparency)
+// - Auto-refresh on symbol/timeframe changes
+// - Performance optimized (single label instance)
+//
+// Future Roadmap:
+// - Phase 2: Kill zones, sessions, session highs/lows
+// - Phase 3: Market structure, liquidity zones, FVGs
+// - Phase 4: Alerts, widgets, presets
+// - Phase 5: Full trading suite & themes
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INPUT GROUPS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Define input group constants for organized UI
+var string GRP_DISPLAY = "Display Settings"
+var string GRP_CONTENT = "Content"
+var string GRP_STYLE = "Style"
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISPLAY SETTINGS
+// ─────────────────────────────────────────────────────────────────────────────
+
+showWatermark = input.bool(true, "Show Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_DISPLAY)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTENT SETTINGS - LINE 1 (Title)
+// ─────────────────────────────────────────────────────────────────────────────
+
+titleText = input.string("", "Title Text", tooltip="Custom title text for line 1", group=GRP_CONTENT)
+
+showSymbol = input.bool(true, "Show Symbol", inline="content01", tooltip="Display current symbol ticker in title", group=GRP_CONTENT)
+
+showTimeframe = input.bool(true, "Show Timeframe", inline="content01", tooltip="Display current chart timeframe in title", group=GRP_CONTENT)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTENT SETTINGS - LINE 2 (Subtitles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+subtitle1 = input.string("", "Subtitle 1", inline="content02", tooltip="First subtitle cell", group=GRP_CONTENT)
+
+subtitle2 = input.string("", "Subtitle 2", inline="content02", tooltip="Second subtitle cell", group=GRP_CONTENT)
+
+subtitle3 = input.string("", "Subtitle 3", inline="content02", tooltip="Third subtitle cell", group=GRP_CONTENT)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLE SETTINGS
+// ─────────────────────────────────────────────────────────────────────────────
+
+textColor = input.color(color.new(color.white, 0), "Text Color", inline="style01", tooltip="Choose watermark text color", group=GRP_STYLE)
+
+transparency = input.int(50, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_STYLE)
+
+fontSize = input.string(size.normal, "Font Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], inline="style02", tooltip="Select watermark text size", group=GRP_STYLE)
+
+position = input.string("Center", "Position", options=["Left", "Center", "Right"], inline="style02", tooltip="Horizontal alignment of watermark", group=GRP_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK TEXT CONSTRUCTION (TWO-LINE APPROACH)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Build Line 1 (Title) - symbol, timeframe, and/or custom title
+var string line1Text = ""
+
+if showWatermark
+    line1Text := ""
+
+    // Add symbol if enabled
+    if showSymbol
+        line1Text += syminfo.ticker
+
+    // Add timeframe if enabled
+    if showTimeframe
+        // Add separator if symbol is also shown
+        if showSymbol
+            line1Text += " | "
+        line1Text += timeframe.period
+
+    // Add custom title text if provided
+    if titleText != ""
+        // Add separator if symbol or timeframe is shown
+        if showSymbol or showTimeframe
+            line1Text += " | "
+        line1Text += titleText
+
+// Build Line 2 (Subtitles) - up to 3 subtitle cells with pipe separators
+var string line2Text = ""
+
+if showWatermark
+    line2Text := ""
+
+    // Add subtitle 1 if provided
+    if subtitle1 != ""
+        line2Text += subtitle1
+
+    // Add subtitle 2 if provided
+    if subtitle2 != ""
+        // Add separator if subtitle1 exists
+        if subtitle1 != ""
+            line2Text += " | "
+        line2Text += subtitle2
+
+    // Add subtitle 3 if provided
+    if subtitle3 != ""
+        // Add separator if subtitle1 or subtitle2 exists
+        if subtitle1 != "" or subtitle2 != ""
+            line2Text += " | "
+        line2Text += subtitle3
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// POSITION & ALIGNMENT LOGIC
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Determine table position based on position setting
+var string tablePosition = position.top_center
+if position == "Left"
+    tablePosition := position.top_left
+else if position == "Right"
+    tablePosition := position.top_right
+else
+    tablePosition := position.top_center
+
+// Determine horizontal alignment based on position setting
+var string hAlign = text.align_center
+if position == "Left"
+    hAlign := text.align_left
+else if position == "Right"
+    hAlign := text.align_right
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TABLE MANAGEMENT (Fixed Screen Position Pattern - Two Rows)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Create persistent table variable with 2 rows (maintains state across bars)
+// Using table instead of label ensures fixed position at top of chart
+// Row 0: Title line (symbol, timeframe, custom title)
+// Row 1: Subtitle line (subtitle1 | subtitle2 | subtitle3)
+var table watermarkTable = table.new(position=tablePosition, columns=1, rows=2, bgcolor=color.new(color.black, 100), frame_width=0, border_width=0)
+
+// Apply transparency to text color
+watermarkTextColor = color.new(textColor, transparency)
+
+// Only update on last bar for optimal performance
+if barstate.islast
+    if showWatermark
+        // Update row 0 (title line) - only show if content exists
+        if line1Text != ""
+            table.cell(watermarkTable, column=0, row=0, text=line1Text, text_color=watermarkTextColor, text_size=fontSize, text_halign=hAlign, bgcolor=color.new(color.black, 100))
+        else
+            table.cell(watermarkTable, column=0, row=0, text="", bgcolor=color.new(color.black, 100))
+
+        // Update row 1 (subtitle line) - only show if content exists
+        if line2Text != ""
+            table.cell(watermarkTable, column=0, row=1, text=line2Text, text_color=watermarkTextColor, text_size=fontSize, text_halign=hAlign, bgcolor=color.new(color.black, 100))
+        else
+            table.cell(watermarkTable, column=0, row=1, text="", bgcolor=color.new(color.black, 100))
+    else
+        // Clear both table cells when watermark is disabled
+        table.cell(watermarkTable, column=0, row=0, text="", bgcolor=color.new(color.black, 100))
+        table.cell(watermarkTable, column=0, row=1, text="", bgcolor=color.new(color.black, 100))
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTO-REFRESH MECHANISM
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Auto-refresh is handled automatically by Pine Script:
+// - syminfo.ticker updates when symbol changes
+// - timeframe.period updates when timeframe changes
+// - Table cell updates on barstate.islast with updated values
+// - No additional logic required for auto-refresh functionality
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FUTURE EXPANSION HOOKS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Phase 2: Kill zones and sessions
+// - Add session detection logic
+// - Implement kill zone highlighting
+// - Session high/low tracking
+
+// Phase 3: Market structure
+// - Fair Value Gaps (FVG) detection
+// - Liquidity zone identification
+// - Order block analysis
+// - Market structure break detection
+
+// Phase 4: Alerts and presets
+// - Custom alert conditions
+// - Preset configuration system
+// - Widget components
+
+// Phase 5: Full trading suite
+// - Theme system
+// - Advanced customization
+// - Multi-indicator coordination
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// END OF OBSIDIAN PHASE 1
+// ══════════════════════════════════════════════════════════════════════════════
