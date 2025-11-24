@@ -6,7 +6,7 @@ indicator("Obsidian", shorttitle="OBS", overlay=true)
 // Phase 1 + 2: Watermark Foundation + Sessions & Kill Zones
 //
 // Purpose: ICT-focused trading indicator with sessions, kill zones, and watermark
-// Version: 2.2.0 (Timezone Selector + Time String Inputs + Layout Reorganization)
+// Version: 2.2.1 (Real-Time Session High/Low Lines + Session Box Fixes)
 // Author: Generated via Claude Code
 // Date: 2025-11-24
 //
@@ -101,6 +101,7 @@ var string GRP_SESSION_TIMES = "Session Times"
 var string GRP_SESSION_STYLE = "Session Style"
 var string GRP_KILLZONES = "═══ KILL ZONES ═══"
 var string GRP_KZ_STYLE = "Kill Zone Style"
+var string GRP_DISPLAY_CONTROL = "═══ DISPLAY CONTROL ═══"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TIMEZONE CONFIGURATION
@@ -119,6 +120,19 @@ timezoneOffset = getTimezoneOffset()
 timezoneInfo = input.string("ℹ️ Timezone Settings", "Session Times Reference", tooltip="⏰ SESSION TIMES IN YOUR SELECTED TIMEZONE\n\nSelect your timezone above (GMT+0 or GMT-5)\n\n📍 Default Times:\n• Asian: 00:00-09:00\n• London: 08:00-16:00\n• NY: 13:00-22:00\n\nNote: All times are displayed in your selected timezone.\nTimes will automatically adjust based on your timezone selection.\n\n💡 Time Format: HH:MM (24-hour format)\nExamples: 09:30, 13:00, 17:45", group=GRP_TIMEZONES)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DISPLAY CONTROL - Trading Days to Display (Phase 2.1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Input for number of days
+daysToShow = input.int(3, "Trading Days to Display", minval=1, maxval=30, tooltip="Number of trading days (excluding weekends) to show sessions and killzones.\nExample: 3 = today + 2 prior trading days", group=GRP_DISPLAY_CONTROL)
+
+// Optional: Quick presets dropdown
+displayPreset = input.string("Custom", "Display Preset", options=["Current Day Only", "3-Day View", "Week View", "Custom"], tooltip="Quick preset for display period", group=GRP_DISPLAY_CONTROL, inline="preset01")
+
+// Derive effective days from preset or custom input
+effectiveDays = displayPreset == "Current Day Only" ? 1 : displayPreset == "3-Day View" ? 3 : displayPreset == "Week View" ? 7 : daysToShow
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SESSIONS - Display Toggles
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -133,15 +147,15 @@ showNYSession = input.bool(true, "New York Session", inline="sess01", tooltip="N
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Asian Session Times
-asianStartTime = input.string("00:00", "Asian Start Time", inline="time01", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
-asianEndTime = input.string("09:00", "End Time", inline="time01", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
+asianStartTime = input.string("19:00", "Asian Start Time", inline="time01", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+asianEndTime = input.string("02:00", "End Time", inline="time01", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
 
 // London Session Times
-londonStartTime = input.string("08:00", "London Start Time", inline="time02", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+londonStartTime = input.string("03:00", "London Start Time", inline="time02", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
 londonEndTime = input.string("16:00", "End Time", inline="time02", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
 
 // New York Session Times
-nyStartTime = input.string("13:00", "NY Start Time", inline="time03", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+nyStartTime = input.string("09:00", "NY Start Time", inline="time03", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
 nyEndTime = input.string("22:00", "End Time", inline="time03", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -411,7 +425,7 @@ inSessionTime(startTimeStr, endTimeStr) =>
     endMinutes = timeToMinutes(endTimeStr)
 
     // Handle sessions that cross midnight
-    if startMinutes < endMinutes
+    if startMinutes <= endMinutes
         currentMinutes >= startMinutes and currentMinutes <= endMinutes
     else
         currentMinutes >= startMinutes or currentMinutes <= endMinutes
@@ -431,6 +445,51 @@ isSessionEndTime(endTimeStr) =>
     endMinutes = timeToMinutes(endTimeStr)
 
     currentMinutes > endMinutes and prevMinutes <= endMinutes
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRADING DAY DETECTION (Weekend Exclusion for Forex) - Phase 2.1
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Check if a given time is a weekend (Saturday or Sunday)
+isWeekend(t) =>
+    dayOfWeek = dayofweek(t)
+    dayOfWeek == dayofweek.saturday or dayOfWeek == dayofweek.sunday
+
+// Get current trading day timestamp (midnight of current trading day)
+getCurrentTradingDay() =>
+    timestamp(year(time), month(time), dayofmonth(time), 0, 0, 0)
+
+// Count back N trading days from current day
+getTradingDayNDaysAgo(n) =>
+    var int daysBack = 0
+    var int tradingDaysFound = 0
+    var int resultTimestamp = time
+
+    if n == 0
+        getCurrentTradingDay()
+    else
+        daysBack := 0
+        tradingDaysFound := 0
+
+        // Loop back through calendar days until we find N trading days
+        for i = 1 to 100  // Safety limit (100 calendar days should cover 30 trading days)
+            testTime = time - (i * 86400000)  // i days ago in milliseconds
+
+            if not isWeekend(testTime)
+                tradingDaysFound += 1
+
+                if tradingDaysFound == n
+                    resultTimestamp := timestamp(year(testTime), month(testTime), dayofmonth(testTime), 0, 0, 0)
+                    break
+
+        resultTimestamp
+
+// Get cutoff timestamp for historical display
+historicalCutoffTime = getTradingDayNDaysAgo(effectiveDays - 1)
+
+// Check if current bar is within display window
+isWithinDisplayWindow() =>
+    time >= historicalCutoffTime
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SESSION STATE TRACKING
@@ -454,41 +513,58 @@ var int asianSessionStartBar = na
 var int londonSessionStartBar = na
 var int nySessionStartBar = na
 
-// Asian Session Tracking
-if showSessions and showAsianSession
-    if isSessionStartTime(asianStartTime)
-        asianSessionHigh := high
-        asianSessionLow := low
-        asianSessionOpen := open
-        asianSessionStartBar := bar_index
-    else if inSessionTime(asianStartTime, asianEndTime)
-        asianSessionHigh := math.max(asianSessionHigh, high)
-        asianSessionLow := math.min(asianSessionLow, low)
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE BOX TRACKING (for real-time updates on current day) - Phase 2.2
+// ─────────────────────────────────────────────────────────────────────────────
 
-// London Session Tracking
-if showSessions and showLondonSession
-    if isSessionStartTime(londonStartTime)
-        londonSessionHigh := high
-        londonSessionLow := low
-        londonSessionOpen := open
-        londonSessionStartBar := bar_index
-    else if inSessionTime(londonStartTime, londonEndTime)
-        londonSessionHigh := math.max(londonSessionHigh, high)
-        londonSessionLow := math.min(londonSessionLow, low)
+// Track active box references for real-time updates
+var box asianSessionLiveBox = na
+var box londonSessionLiveBox = na
+var box nySessionLiveBox = na
 
-// New York Session Tracking
-if showSessions and showNYSession
-    if isSessionStartTime(nyStartTime)
-        nySessionHigh := high
-        nySessionLow := low
-        nySessionOpen := open
-        nySessionStartBar := bar_index
-    else if inSessionTime(nyStartTime, nyEndTime)
-        nySessionHigh := math.max(nySessionHigh, high)
-        nySessionLow := math.min(nySessionLow, low)
+var box asianKZLiveBox = na
+var box londonKZLiveBox = na
+var box nyAMKZLiveBox = na
+var box nyLunchKZLiveBox = na
+var box nyPMKZLiveBox = na
+
+// Track if session/killzone is on current day
+var bool asianSessionIsToday = false
+var bool londonSessionIsToday = false
+var bool nySessionIsToday = false
+
+var bool asianKZIsToday = false
+var bool londonKZIsToday = false
+var bool nyAMKZIsToday = false
+var bool nyLunchKZIsToday = false
+var bool nyPMKZIsToday = false
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SESSION LINES RENDERING (High/Low/Open/Close)
+// LIVE LINE TRACKING (for real-time session high/low line updates) - Phase 2.2.1
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Track active session high/low line references for real-time updates
+var line asianSessionLiveHighLine = na
+var line asianSessionLiveLowLine = na
+var line londonSessionLiveHighLine = na
+var line londonSessionLiveLowLine = na
+var line nySessionLiveHighLine = na
+var line nySessionLiveLowLine = na
+
+// Track active session high/low label references for real-time updates
+var label asianSessionLiveHighLabel = na
+var label asianSessionLiveLowLabel = na
+var label londonSessionLiveHighLabel = na
+var label londonSessionLiveLowLabel = na
+var label nySessionLiveHighLabel = na
+var label nySessionLiveLowLabel = na
+
+// Detect if we're on current trading day
+isCurrentTradingDay() =>
+    not isWeekend(time) and dayofmonth(time) == dayofmonth(timenow)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LINE STYLE HELPER (must be defined before session tracking blocks)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Convert line style string to Pine Script constant
@@ -502,8 +578,230 @@ getLineStyle() =>
 
 lineStyle = getLineStyle()
 
+// Asian Session Tracking with real-time background box updates
+if showSessions and showAsianSession
+    if isSessionStartTime(asianStartTime)
+        asianSessionHigh := high
+        asianSessionLow := low
+        asianSessionOpen := open
+        asianSessionStartBar := bar_index
+        asianSessionIsToday := isCurrentTradingDay()
+
+        // Create background box immediately if enabled and on current day
+        if showSessionBg and asianSessionIsToday and isWithinDisplayWindow()
+            bgColor = color.new(asianColor, sessionBgTransparency)
+            asianSessionLiveBox := box.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
+
+        // Create live high/low lines immediately if enabled and on current day
+        if asianSessionIsToday and isWithinDisplayWindow()
+            if showSessionHighs
+                asianSessionLiveHighLine := line.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionHigh, color=asianColor, width=sessionLineWidth, style=lineStyle)
+                if asianLabel != ""
+                    asianSessionLiveHighLabel := label.new(bar_index, asianSessionHigh, asianLabel + " H", color=color.new(color.black, 100), textcolor=asianColor, size=size.small, style=label.style_label_left)
+
+            if showSessionLows
+                asianSessionLiveLowLine := line.new(asianSessionStartBar, asianSessionLow, bar_index, asianSessionLow, color=asianColor, width=sessionLineWidth, style=lineStyle)
+                if asianLabel != ""
+                    asianSessionLiveLowLabel := label.new(bar_index, asianSessionLow, asianLabel + " L", color=color.new(color.black, 100), textcolor=asianColor, size=size.small, style=label.style_label_left)
+
+    else if inSessionTime(asianStartTime, asianEndTime)
+        bool highBreach = high > asianSessionHigh
+        bool lowBreach = low < asianSessionLow
+
+        if highBreach
+            asianSessionHigh := high
+        if lowBreach
+            asianSessionLow := low
+
+        // Update live session background box if enabled
+        if showSessionBg and asianSessionIsToday and not na(asianSessionLiveBox)
+            box.set_right(asianSessionLiveBox, bar_index)
+            if highBreach
+                box.set_top(asianSessionLiveBox, asianSessionHigh)
+            if lowBreach
+                box.set_bottom(asianSessionLiveBox, asianSessionLow)
+
+        // Update live session high/low lines if enabled and on current day
+        if asianSessionIsToday
+            if showSessionHighs and not na(asianSessionLiveHighLine)
+                line.set_x2(asianSessionLiveHighLine, bar_index)
+                if highBreach
+                    line.set_y1(asianSessionLiveHighLine, asianSessionHigh)
+                    line.set_y2(asianSessionLiveHighLine, asianSessionHigh)
+                    if not na(asianSessionLiveHighLabel)
+                        label.set_xy(asianSessionLiveHighLabel, bar_index, asianSessionHigh)
+
+            if showSessionLows and not na(asianSessionLiveLowLine)
+                line.set_x2(asianSessionLiveLowLine, bar_index)
+                if lowBreach
+                    line.set_y1(asianSessionLiveLowLine, asianSessionLow)
+                    line.set_y2(asianSessionLiveLowLine, asianSessionLow)
+                    if not na(asianSessionLiveLowLabel)
+                        label.set_xy(asianSessionLiveLowLabel, bar_index, asianSessionLow)
+
+    else if isSessionEndTime(asianEndTime)
+        // Session ended - create static box for historical sessions
+        if showSessionBg and not asianSessionIsToday and isWithinDisplayWindow() and not na(asianSessionStartBar)
+            bgColor = color.new(asianColor, sessionBgTransparency)
+            box.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
+
+        // Reset live references
+        asianSessionLiveBox := na
+        asianSessionLiveHighLine := na
+        asianSessionLiveLowLine := na
+        asianSessionLiveHighLabel := na
+        asianSessionLiveLowLabel := na
+
+// London Session Tracking with real-time background box updates
+if showSessions and showLondonSession
+    if isSessionStartTime(londonStartTime)
+        londonSessionHigh := high
+        londonSessionLow := low
+        londonSessionOpen := open
+        londonSessionStartBar := bar_index
+        londonSessionIsToday := isCurrentTradingDay()
+
+        if showSessionBg and londonSessionIsToday and isWithinDisplayWindow()
+            bgColor = color.new(londonColor, sessionBgTransparency)
+            londonSessionLiveBox := box.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
+
+        // Create live high/low lines immediately if enabled and on current day
+        if londonSessionIsToday and isWithinDisplayWindow()
+            if showSessionHighs
+                londonSessionLiveHighLine := line.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionHigh, color=londonColor, width=sessionLineWidth, style=lineStyle)
+                if londonLabel != ""
+                    londonSessionLiveHighLabel := label.new(bar_index, londonSessionHigh, londonLabel + " H", color=color.new(color.black, 100), textcolor=londonColor, size=size.small, style=label.style_label_left)
+
+            if showSessionLows
+                londonSessionLiveLowLine := line.new(londonSessionStartBar, londonSessionLow, bar_index, londonSessionLow, color=londonColor, width=sessionLineWidth, style=lineStyle)
+                if londonLabel != ""
+                    londonSessionLiveLowLabel := label.new(bar_index, londonSessionLow, londonLabel + " L", color=color.new(color.black, 100), textcolor=londonColor, size=size.small, style=label.style_label_left)
+
+    else if inSessionTime(londonStartTime, londonEndTime)
+        bool highBreach = high > londonSessionHigh
+        bool lowBreach = low < londonSessionLow
+
+        if highBreach
+            londonSessionHigh := high
+        if lowBreach
+            londonSessionLow := low
+
+        if showSessionBg and londonSessionIsToday and not na(londonSessionLiveBox)
+            box.set_right(londonSessionLiveBox, bar_index)
+            if highBreach
+                box.set_top(londonSessionLiveBox, londonSessionHigh)
+            if lowBreach
+                box.set_bottom(londonSessionLiveBox, londonSessionLow)
+
+        // Update live session high/low lines if enabled and on current day
+        if londonSessionIsToday
+            if showSessionHighs and not na(londonSessionLiveHighLine)
+                line.set_x2(londonSessionLiveHighLine, bar_index)
+                if highBreach
+                    line.set_y1(londonSessionLiveHighLine, londonSessionHigh)
+                    line.set_y2(londonSessionLiveHighLine, londonSessionHigh)
+                    if not na(londonSessionLiveHighLabel)
+                        label.set_xy(londonSessionLiveHighLabel, bar_index, londonSessionHigh)
+
+            if showSessionLows and not na(londonSessionLiveLowLine)
+                line.set_x2(londonSessionLiveLowLine, bar_index)
+                if lowBreach
+                    line.set_y1(londonSessionLiveLowLine, londonSessionLow)
+                    line.set_y2(londonSessionLiveLowLine, londonSessionLow)
+                    if not na(londonSessionLiveLowLabel)
+                        label.set_xy(londonSessionLiveLowLabel, bar_index, londonSessionLow)
+
+    else if isSessionEndTime(londonEndTime)
+        // Session ended - create static box for historical sessions
+        if showSessionBg and not londonSessionIsToday and isWithinDisplayWindow() and not na(londonSessionStartBar)
+            bgColor = color.new(londonColor, sessionBgTransparency)
+            box.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
+
+        // Reset live references
+        londonSessionLiveBox := na
+        londonSessionLiveHighLine := na
+        londonSessionLiveLowLine := na
+        londonSessionLiveHighLabel := na
+        londonSessionLiveLowLabel := na
+
+// New York Session Tracking with real-time background box updates
+if showSessions and showNYSession
+    if isSessionStartTime(nyStartTime)
+        nySessionHigh := high
+        nySessionLow := low
+        nySessionOpen := open
+        nySessionStartBar := bar_index
+        nySessionIsToday := isCurrentTradingDay()
+
+        if showSessionBg and nySessionIsToday and isWithinDisplayWindow()
+            bgColor = color.new(nyColor, sessionBgTransparency)
+            nySessionLiveBox := box.new(nySessionStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
+
+        // Create live high/low lines immediately if enabled and on current day
+        if nySessionIsToday and isWithinDisplayWindow()
+            if showSessionHighs
+                nySessionLiveHighLine := line.new(nySessionStartBar, nySessionHigh, bar_index, nySessionHigh, color=nyColor, width=sessionLineWidth, style=lineStyle)
+                if nyLabel != ""
+                    nySessionLiveHighLabel := label.new(bar_index, nySessionHigh, nyLabel + " H", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
+
+            if showSessionLows
+                nySessionLiveLowLine := line.new(nySessionStartBar, nySessionLow, bar_index, nySessionLow, color=nyColor, width=sessionLineWidth, style=lineStyle)
+                if nyLabel != ""
+                    nySessionLiveLowLabel := label.new(bar_index, nySessionLow, nyLabel + " L", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
+
+    else if inSessionTime(nyStartTime, nyEndTime)
+        bool highBreach = high > nySessionHigh
+        bool lowBreach = low < nySessionLow
+
+        if highBreach
+            nySessionHigh := high
+        if lowBreach
+            nySessionLow := low
+
+        if showSessionBg and nySessionIsToday and not na(nySessionLiveBox)
+            box.set_right(nySessionLiveBox, bar_index)
+            if highBreach
+                box.set_top(nySessionLiveBox, nySessionHigh)
+            if lowBreach
+                box.set_bottom(nySessionLiveBox, nySessionLow)
+
+        // Update live session high/low lines if enabled and on current day
+        if nySessionIsToday
+            if showSessionHighs and not na(nySessionLiveHighLine)
+                line.set_x2(nySessionLiveHighLine, bar_index)
+                if highBreach
+                    line.set_y1(nySessionLiveHighLine, nySessionHigh)
+                    line.set_y2(nySessionLiveHighLine, nySessionHigh)
+                    if not na(nySessionLiveHighLabel)
+                        label.set_xy(nySessionLiveHighLabel, bar_index, nySessionHigh)
+
+            if showSessionLows and not na(nySessionLiveLowLine)
+                line.set_x2(nySessionLiveLowLine, bar_index)
+                if lowBreach
+                    line.set_y1(nySessionLiveLowLine, nySessionLow)
+                    line.set_y2(nySessionLiveLowLine, nySessionLow)
+                    if not na(nySessionLiveLowLabel)
+                        label.set_xy(nySessionLiveLowLabel, bar_index, nySessionLow)
+
+    else if isSessionEndTime(nyEndTime)
+        // Session ended - create static box for historical sessions
+        if showSessionBg and not nySessionIsToday and isWithinDisplayWindow() and not na(nySessionStartBar)
+            bgColor = color.new(nyColor, sessionBgTransparency)
+            box.new(nySessionStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
+
+        // Reset live references
+        nySessionLiveBox := na
+        nySessionLiveHighLine := na
+        nySessionLiveLowLine := na
+        nySessionLiveHighLabel := na
+        nySessionLiveLowLabel := na
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION LINES RENDERING (High/Low/Open/Close)
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Draw session high/low lines at session end
-if showSessions
+if showSessions and isWithinDisplayWindow()
     // Asian Session Lines
     if showAsianSession and isSessionEndTime(asianEndTime)
         if showSessionHighs and not na(asianSessionHigh)
@@ -541,7 +839,7 @@ if showSessions
                 label.new(bar_index, nySessionLow, nyLabel + " L", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
 
 // Draw session open/close markers (vertical lines)
-if showSessions
+if showSessions and isWithinDisplayWindow()
     if showSessionOpen
         if showAsianSession and isSessionStartTime(asianStartTime)
             line.new(bar_index, low, bar_index, high, color=asianColor, width=1, style=line.style_dotted)
@@ -590,120 +888,236 @@ inNYAMKZ = inSessionTime(nyAMKZStartTime, nyAMKZEndTime)
 inNYLunchKZ = inSessionTime(nyLunchKZStartTime, nyLunchKZEndTime)
 inNYPMKZ = inSessionTime(nyPMKZStartTime, nyPMKZEndTime)
 
-// Track Asian Kill Zone
+// Track Asian Kill Zone with real-time updates
 if showKillZones and showAsianKZ
     if isSessionStartTime(asianKZStartTime)
         asianKZStartBar := bar_index
         asianKZHigh := high
         asianKZLow := low
+        asianKZIsToday := isCurrentTradingDay()
+
+        // Create box immediately if on current day
+        if asianKZIsToday and isWithinDisplayWindow()
+            kzColor = color.new(asianKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            asianKZLiveBox := box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            // Add label
+            if showKZLabels and asianKZLabel != ""
+                label.new(bar_index, asianKZHigh, asianKZLabel, color=color.new(asianKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
     else if inAsianKZ
-        asianKZHigh := math.max(asianKZHigh, high)
-        asianKZLow := math.min(asianKZLow, low)
-    else if isSessionEndTime(asianKZEndTime) and not na(asianKZStartBar)
-        kzColor = color.new(asianKZColor, kzTransparency)
-        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
-        box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+        // Update high/low if breached
+        bool highBreach = high > asianKZHigh
+        bool lowBreach = low < asianKZLow
 
-        if showKZLabels and asianKZLabel != ""
-            label.new(bar_index, asianKZHigh, asianKZLabel, color=color.new(asianKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+        if highBreach
+            asianKZHigh := high
+        if lowBreach
+            asianKZLow := low
 
-// Track London Kill Zone
+        // REAL-TIME UPDATE: Modify existing box on current day
+        if asianKZIsToday and not na(asianKZLiveBox)
+            // Horizontal expansion (time) - every tick
+            box.set_right(asianKZLiveBox, bar_index)
+
+            // Vertical expansion (only if high/low breached)
+            if highBreach
+                box.set_top(asianKZLiveBox, asianKZHigh)
+            if lowBreach
+                box.set_bottom(asianKZLiveBox, asianKZLow)
+
+    else if isSessionEndTime(asianKZEndTime)
+        // Session ended
+        if not asianKZIsToday and isWithinDisplayWindow() and not na(asianKZStartBar)
+            // Historical session - draw static box
+            kzColor = color.new(asianKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and asianKZLabel != ""
+                label.new(bar_index, asianKZHigh, asianKZLabel, color=color.new(asianKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+        // Reset live box reference
+        asianKZLiveBox := na
+
+// Track London Kill Zone with real-time updates
 if showKillZones and showLondonKZ
     if isSessionStartTime(londonKZStartTime)
         londonKZStartBar := bar_index
         londonKZHigh := high
         londonKZLow := low
+        londonKZIsToday := isCurrentTradingDay()
+
+        // Create box immediately if on current day
+        if londonKZIsToday and isWithinDisplayWindow()
+            kzColor = color.new(londonKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            londonKZLiveBox := box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and londonKZLabel != ""
+                label.new(bar_index, londonKZHigh, londonKZLabel, color=color.new(londonKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
     else if inLondonKZ
-        londonKZHigh := math.max(londonKZHigh, high)
-        londonKZLow := math.min(londonKZLow, low)
-    else if isSessionEndTime(londonKZEndTime) and not na(londonKZStartBar)
-        kzColor = color.new(londonKZColor, kzTransparency)
-        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
-        box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+        bool highBreach = high > londonKZHigh
+        bool lowBreach = low < londonKZLow
 
-        if showKZLabels and londonKZLabel != ""
-            label.new(bar_index, londonKZHigh, londonKZLabel, color=color.new(londonKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+        if highBreach
+            londonKZHigh := high
+        if lowBreach
+            londonKZLow := low
 
-// Track NY AM Kill Zone
+        if londonKZIsToday and not na(londonKZLiveBox)
+            box.set_right(londonKZLiveBox, bar_index)
+            if highBreach
+                box.set_top(londonKZLiveBox, londonKZHigh)
+            if lowBreach
+                box.set_bottom(londonKZLiveBox, londonKZLow)
+
+    else if isSessionEndTime(londonKZEndTime)
+        if not londonKZIsToday and isWithinDisplayWindow() and not na(londonKZStartBar)
+            kzColor = color.new(londonKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and londonKZLabel != ""
+                label.new(bar_index, londonKZHigh, londonKZLabel, color=color.new(londonKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+        londonKZLiveBox := na
+
+// Track NY AM Kill Zone with real-time updates
 if showKillZones and showNYAMKZ
     if isSessionStartTime(nyAMKZStartTime)
         nyAMKZStartBar := bar_index
         nyAMKZHigh := high
         nyAMKZLow := low
+        nyAMKZIsToday := isCurrentTradingDay()
+
+        if nyAMKZIsToday and isWithinDisplayWindow()
+            kzColor = color.new(nyAMKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            nyAMKZLiveBox := box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and nyAMKZLabel != ""
+                label.new(bar_index, nyAMKZHigh, nyAMKZLabel, color=color.new(nyAMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
     else if inNYAMKZ
-        nyAMKZHigh := math.max(nyAMKZHigh, high)
-        nyAMKZLow := math.min(nyAMKZLow, low)
-    else if isSessionEndTime(nyAMKZEndTime) and not na(nyAMKZStartBar)
-        kzColor = color.new(nyAMKZColor, kzTransparency)
-        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
-        box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+        bool highBreach = high > nyAMKZHigh
+        bool lowBreach = low < nyAMKZLow
 
-        if showKZLabels and nyAMKZLabel != ""
-            label.new(bar_index, nyAMKZHigh, nyAMKZLabel, color=color.new(nyAMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+        if highBreach
+            nyAMKZHigh := high
+        if lowBreach
+            nyAMKZLow := low
 
-// Track NY Lunch Kill Zone
+        if nyAMKZIsToday and not na(nyAMKZLiveBox)
+            box.set_right(nyAMKZLiveBox, bar_index)
+            if highBreach
+                box.set_top(nyAMKZLiveBox, nyAMKZHigh)
+            if lowBreach
+                box.set_bottom(nyAMKZLiveBox, nyAMKZLow)
+
+    else if isSessionEndTime(nyAMKZEndTime)
+        if not nyAMKZIsToday and isWithinDisplayWindow() and not na(nyAMKZStartBar)
+            kzColor = color.new(nyAMKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and nyAMKZLabel != ""
+                label.new(bar_index, nyAMKZHigh, nyAMKZLabel, color=color.new(nyAMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+        nyAMKZLiveBox := na
+
+// Track NY Lunch Kill Zone with real-time updates
 if showKillZones and showNYLunchKZ
     if isSessionStartTime(nyLunchKZStartTime)
         nyLunchKZStartBar := bar_index
         nyLunchKZHigh := high
         nyLunchKZLow := low
+        nyLunchKZIsToday := isCurrentTradingDay()
+
+        if nyLunchKZIsToday and isWithinDisplayWindow()
+            kzColor = color.new(nyLunchKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            nyLunchKZLiveBox := box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and nyLunchKZLabel != ""
+                label.new(bar_index, nyLunchKZHigh, nyLunchKZLabel, color=color.new(nyLunchKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
     else if inNYLunchKZ
-        nyLunchKZHigh := math.max(nyLunchKZHigh, high)
-        nyLunchKZLow := math.min(nyLunchKZLow, low)
-    else if isSessionEndTime(nyLunchKZEndTime) and not na(nyLunchKZStartBar)
-        kzColor = color.new(nyLunchKZColor, kzTransparency)
-        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
-        box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+        bool highBreach = high > nyLunchKZHigh
+        bool lowBreach = low < nyLunchKZLow
 
-        if showKZLabels and nyLunchKZLabel != ""
-            label.new(bar_index, nyLunchKZHigh, nyLunchKZLabel, color=color.new(nyLunchKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+        if highBreach
+            nyLunchKZHigh := high
+        if lowBreach
+            nyLunchKZLow := low
 
-// Track NY PM Kill Zone
+        if nyLunchKZIsToday and not na(nyLunchKZLiveBox)
+            box.set_right(nyLunchKZLiveBox, bar_index)
+            if highBreach
+                box.set_top(nyLunchKZLiveBox, nyLunchKZHigh)
+            if lowBreach
+                box.set_bottom(nyLunchKZLiveBox, nyLunchKZLow)
+
+    else if isSessionEndTime(nyLunchKZEndTime)
+        if not nyLunchKZIsToday and isWithinDisplayWindow() and not na(nyLunchKZStartBar)
+            kzColor = color.new(nyLunchKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and nyLunchKZLabel != ""
+                label.new(bar_index, nyLunchKZHigh, nyLunchKZLabel, color=color.new(nyLunchKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+        nyLunchKZLiveBox := na
+
+// Track NY PM Kill Zone with real-time updates
 if showKillZones and showNYPMKZ
     if isSessionStartTime(nyPMKZStartTime)
         nyPMKZStartBar := bar_index
         nyPMKZHigh := high
         nyPMKZLow := low
+        nyPMKZIsToday := isCurrentTradingDay()
+
+        if nyPMKZIsToday and isWithinDisplayWindow()
+            kzColor = color.new(nyPMKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            nyPMKZLiveBox := box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+            if showKZLabels and nyPMKZLabel != ""
+                label.new(bar_index, nyPMKZHigh, nyPMKZLabel, color=color.new(nyPMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
     else if inNYPMKZ
-        nyPMKZHigh := math.max(nyPMKZHigh, high)
-        nyPMKZLow := math.min(nyPMKZLow, low)
-    else if isSessionEndTime(nyPMKZEndTime) and not na(nyPMKZStartBar)
-        kzColor = color.new(nyPMKZColor, kzTransparency)
-        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
-        box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+        bool highBreach = high > nyPMKZHigh
+        bool lowBreach = low < nyPMKZLow
 
-        if showKZLabels and nyPMKZLabel != ""
-            label.new(bar_index, nyPMKZHigh, nyPMKZLabel, color=color.new(nyPMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+        if highBreach
+            nyPMKZHigh := high
+        if lowBreach
+            nyPMKZLow := low
 
-// Optional session background boxes
-if showSessions and showSessionBg
-    var int asianBgStartBar = na
-    var int londonBgStartBar = na
-    var int nyBgStartBar = na
+        if nyPMKZIsToday and not na(nyPMKZLiveBox)
+            box.set_right(nyPMKZLiveBox, bar_index)
+            if highBreach
+                box.set_top(nyPMKZLiveBox, nyPMKZHigh)
+            if lowBreach
+                box.set_bottom(nyPMKZLiveBox, nyPMKZLow)
 
-    // Asian Session Background
-    if showAsianSession
-        if isSessionStartTime(asianStartTime)
-            asianBgStartBar := bar_index
-        else if isSessionEndTime(asianEndTime) and not na(asianBgStartBar)
-            bgColor = color.new(asianColor, sessionBgTransparency)
-            box.new(asianBgStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
+    else if isSessionEndTime(nyPMKZEndTime)
+        if not nyPMKZIsToday and isWithinDisplayWindow() and not na(nyPMKZStartBar)
+            kzColor = color.new(nyPMKZColor, kzTransparency)
+            borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+            box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
 
-    // London Session Background
-    if showLondonSession
-        if isSessionStartTime(londonStartTime)
-            londonBgStartBar := bar_index
-        else if isSessionEndTime(londonEndTime) and not na(londonBgStartBar)
-            bgColor = color.new(londonColor, sessionBgTransparency)
-            box.new(londonBgStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
+            if showKZLabels and nyPMKZLabel != ""
+                label.new(bar_index, nyPMKZHigh, nyPMKZLabel, color=color.new(nyPMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
 
-    // New York Session Background
-    if showNYSession
-        if isSessionStartTime(nyStartTime)
-            nyBgStartBar := bar_index
-        else if isSessionEndTime(nyEndTime) and not na(nyBgStartBar)
-            bgColor = color.new(nyColor, sessionBgTransparency)
-            box.new(nyBgStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
+        nyPMKZLiveBox := na
+
+// REMOVED: Optional session background boxes (now handled in real-time tracking above)
+// The session background boxes are now created immediately at session start
+// and updated in real-time within the session tracking sections (lines 546-633)
+// This eliminates the duplicate static box creation at session end
 
 
 // ══════════════════════════════════════════════════════════════════════════════
