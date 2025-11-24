@@ -1,6 +1,6 @@
 # 🖤 Obsidian - TradingView All-in-One Indicator
 
-**Version**: 1.0.0 (Phase 1)
+**Version**: 2.0.0 (Phase 1 + 2)
 **Platform**: TradingView
 **Language**: Pine Script v6
 
@@ -8,9 +8,9 @@
 
 ## 📖 Overview
 
-Obsidian is a multi-purpose TradingView indicator designed as a clean foundation for future advanced trading tools. Phase 1 provides a simple, elegant watermark-style chart overlay with full customization capabilities.
+Obsidian is an ICT-focused TradingView indicator combining a customizable watermark with powerful session and kill zone visualization. Perfect for traders who need clean, professional chart overlays with precise session timing and kill zone identification.
 
-### ✨ Phase 1 Features
+### ✨ Phase 1 Features (Completed)
 
 - ✅ **Two-Line Watermark**: Clean overlay fixed at top center of chart with dual-line display
 - ✅ **Title Line**: Display symbol, timeframe, and/or custom title text
@@ -19,6 +19,26 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 - ✅ **Full Style Control**: Customize color, transparency, size, and position
 - ✅ **Performance Optimized**: Single table instance for minimal CPU usage
 - ✅ **Clean UI**: Organized grouped inputs for intuitive configuration
+
+### ✨ Phase 2 Features (Completed)
+
+- ✅ **Three Major Sessions**: Asian (Tokyo), London, and New York trading sessions
+- ✅ **Customizable Timezone**: User-selectable timezone (UTC-12 to UTC+12) with auto-adjustment
+- ✅ **Session Visualization**:
+  - Session high/low horizontal lines with custom labels
+  - Session open/close vertical markers
+  - Optional session background boxes (disabled by default)
+- ✅ **Kill Zones**:
+  - Three kill zone boxes (Asian, London, NY) with customizable times
+  - Colored boxes with adjustable transparency
+  - Optional borders and text labels
+  - Independent toggle controls
+- ✅ **Full Customization**:
+  - Individual colors for each session and kill zone
+  - Custom labels for all elements
+  - Line width and style options
+  - Complete toggle control for each feature
+- ✅ **No Watermark Interference**: Sessions and kill zones render independently
 
 ---
 
@@ -44,64 +64,194 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 
 ## 🎨 Configuration
 
-### Display Settings
+### Watermark Settings
+
+#### Display Toggle
 
 **Show Watermark**
-
 - Toggle watermark visibility on/off
 - Default: `ON`
 
-### Content Settings
-
-**Line 1 (Title)**
+#### Watermark Content (Line 1: Title)
 
 **Title Text**
-
 - Add custom title text for the first line
 - Example: "Trading Plan", "Focus Zone", "Analysis"
 - Default: `Empty`
 
 **Show Symbol**
-
 - Display current symbol ticker in title (e.g., BTCUSD, AAPL)
 - Default: `ON`
 
 **Show Timeframe**
-
 - Display current chart timeframe in title (e.g., 1H, 1D, 4H)
 - Default: `ON`
 
-**Line 2 (Subtitles)**
+#### Watermark Content (Line 2: Subtitles)
 
 **Subtitle 1, 2, 3**
-
 - Add up to 3 subtitle cells for the second line
 - Separated by pipe characters "|"
 - Example: "Entry: 45000 | Stop: 44000 | Target: 48000"
 - Default: `Empty`
 
-### Style Settings
+#### Watermark Style
 
 **Text Color**
-
 - Choose watermark text color
 - Default: `White`
 
 **Transparency**
-
 - Control text visibility (0 = opaque, 100 = invisible)
 - Range: 0-100
 - Default: `50`
 
 **Font Size**
-
 - Select text size: Auto, Tiny, Small, Normal, Large, Huge
 - Default: `Normal`
 
 **Position**
-
 - Horizontal alignment: Left, Center, Right
 - Default: `Center`
+
+---
+
+### Time Zones Settings
+
+**User Timezone**
+- Select your reference timezone (UTC-12 to UTC+12)
+- All session and kill zone times adjust automatically
+- Default: `UTC-5` (New York/EST)
+
+---
+
+### Sessions Settings
+
+#### Sessions - Display Toggles
+
+**Show All Sessions**
+- Master toggle for all session displays
+- Default: `ON`
+
+**Asian Session / London Session / New York Session**
+- Individual toggles for each session
+- Default: `ON` for all
+
+#### Session Times
+
+Configure start and end hours for each session in your selected timezone:
+
+**Asian Session**
+- Start Hour: `0` (midnight)
+- End Hour: `9` (9 AM)
+
+**London Session**
+- Start Hour: `2` (2 AM)
+- End Hour: `12` (12 PM)
+
+**New York Session**
+- Start Hour: `8` (8 AM)
+- End Hour: `17` (5 PM)
+
+#### Session Markers
+
+**Session Highs / Session Lows**
+- Show horizontal lines at session high/low levels
+- Default: `ON` for both
+
+**Session Open / Session Close**
+- Show vertical lines marking session boundaries
+- Default: `ON` for both
+
+#### Session Labels
+
+**Asian Label / London Label / NY Label**
+- Customize text labels for each session
+- Default: `"Asian"`, `"London"`, `"New York"`
+
+#### Session Style
+
+**Asian Color / London Color / NY Color**
+- Choose colors for each session's lines and markers
+- Default: Yellow (Asian), Blue (London), Green (NY)
+
+**Show Session Background**
+- Enable optional background boxes for sessions
+- Default: `OFF`
+
+**BG Transparency**
+- Background box transparency (0-100)
+- Default: `90`
+
+**Line Width**
+- Session line thickness (1-5)
+- Default: `1`
+
+**Line Style**
+- Choose line style: Solid, Dashed, Dotted
+- Default: `Solid`
+
+---
+
+### Kill Zones Settings
+
+#### Kill Zones - Display Toggles
+
+**Show All Kill Zones**
+- Master toggle for all kill zone displays
+- Default: `ON`
+
+**Asian Kill Zone / London Kill Zone / NY Kill Zone**
+- Individual toggles for each kill zone
+- Default: `ON` for all
+
+#### Kill Zone Times
+
+Configure start and end hours for each kill zone in your selected timezone:
+
+**Asian Kill Zone**
+- Start Hour: `0`
+- End Hour: `3`
+
+**London Kill Zone**
+- Start Hour: `2` (2:00 AM EST / 7:00 AM GMT)
+- End Hour: `5` (5:00 AM EST / 10:00 AM GMT)
+
+**New York Kill Zone**
+- Start Hour: `7` (7:00 AM EST)
+- End Hour: `10` (10:00 AM EST)
+
+#### Kill Zone Labels
+
+**Asian KZ Label / London KZ Label / NY KZ Label**
+- Customize text labels for each kill zone
+- Default: `"Asian KZ"`, `"London KZ"`, `"NY KZ"`
+
+#### Kill Zone Style
+
+**Asian KZ Color / London KZ Color / NY KZ Color**
+- Choose colors for each kill zone box
+- Default: Yellow, Blue, Green (all with 85% transparency)
+
+**KZ Transparency**
+- Kill zone box transparency (0-100)
+- Default: `85`
+
+**Show KZ Border**
+- Display border on kill zone boxes
+- Default: `ON`
+
+**Border Color / Border Width**
+- Customize kill zone borders
+- Default: White (50% transparency), Width: `1`
+
+**Show KZ Labels**
+- Display text labels on kill zones
+- Default: `ON`
+
+**Label Size / Label Color**
+- Customize kill zone label appearance
+- Default: Small, White
 
 ---
 
@@ -111,30 +261,62 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 
 1. Add Obsidian to your chart
 2. Watermark displays symbol and timeframe by default
-3. Adjust transparency for optimal visibility on your chart background
+3. Sessions and kill zones display automatically
+4. Adjust transparency and colors as needed
 
-### Two-Line Trading Display
+### Watermark Only (Minimal)
 
-1. Line 1 (Title): Shows "BTCUSD | 1H | Trade Setup A"
-2. Line 2 (Subtitles): Enter "Entry: 45000", "Stop: 44000", "Target: 48000"
-3. Result:
-   - Line 1: `BTCUSD | 1H | Trade Setup A`
-   - Line 2: `Entry: 45000 | Stop: 44000 | Target: 48000`
-4. Change symbol/timeframe → line 1 auto-updates
+1. Disable "Show All Sessions" and "Show All Kill Zones"
+2. Customize watermark content and style
+3. Result: Clean two-line text overlay without session markers
 
-### Minimal Display
+### ICT Trading Setup (Full Features)
 
-1. Disable "Show Symbol"
-2. Disable "Show Timeframe"
-3. Enter title text and subtitles only
-4. Result: Clean custom two-line text overlay
+1. Set your timezone to match your trading timezone
+2. Enable all sessions and kill zones
+3. Customize colors:
+   - London: Blue for lines and kill zones
+   - New York: Green for lines and kill zones
+   - Asian: Yellow for lines and kill zones
+4. Result: Complete ICT session and kill zone visualization
 
-### Style Customization
+### Session-Only Display
 
-1. Choose your preferred text color
-2. Adjust transparency for chart background compatibility
-3. Select font size based on chart resolution
-4. Choose position (left for annotations, right for status displays)
+1. Enable "Show All Sessions"
+2. Disable "Show All Kill Zones"
+3. Customize session colors and labels
+4. Result: Session high/low lines with open/close markers
+
+### Kill Zones Only
+
+1. Disable "Show All Sessions"
+2. Enable "Show All Kill Zones"
+3. Customize kill zone times and colors
+4. Result: Clean kill zone boxes without session lines
+
+### Custom Timezone Example (London Trader)
+
+1. Set timezone to UTC+0 (GMT)
+2. Adjust session times:
+   - London: 8:00-17:00 (8 AM to 5 PM GMT)
+   - New York: 13:00-22:00 (1 PM to 10 PM GMT)
+   - Asian: 0:00-9:00 (midnight to 9 AM GMT)
+3. Adjust kill zone times accordingly
+4. Result: Sessions display in your local time
+
+### Combining Features
+
+**Example 1: Trading Plan with Sessions**
+- Line 1 Watermark: "BTCUSD | 1H | Long Bias"
+- Line 2: "Entry: 45000 | Target: 50000"
+- Enable London and NY sessions with kill zones
+- Result: Complete trading setup with visual zones
+
+**Example 2: Multi-Timeframe Analysis**
+- Keep watermark for symbol/timeframe info
+- Enable session backgrounds for visual separation
+- Add custom notes about trend direction
+- Result: Clean analysis overlay with session context
 
 ---
 
@@ -164,34 +346,52 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 
 ## 🗺️ Roadmap
 
-### Phase 2: ICT Kill Zones & Sessions (Future)
+### ✅ Phase 1: Watermark Foundation (Completed)
 
-- London/New York/Asia session boxes
-- Kill zone highlighting
-- Session high/low markers
+- Customizable watermark overlay
+- Symbol and timeframe display
+- Custom subtitle cells
+- Full style customization
 
-### Phase 3: Market Structure (Future)
+### ✅ Phase 2: ICT Kill Zones & Sessions (Completed)
+
+- Three major trading sessions (Asian, London, New York)
+- Customizable timezone support
+- Session high/low lines with labels
+- Session open/close markers
+- Kill zone boxes with full customization
+- Optional session backgrounds
+
+### Phase 3: Market Structure (Planned)
 
 - Fair Value Gaps (FVG) detection
 - Liquidity zone identification
 - Order blocks
 - Market structure breaks
+- Swing high/low markers
+- Break of structure (BOS) detection
 
-### Phase 4: Alerts & Presets (Future)
+### Phase 4: Alerts & Presets (Planned)
 
-- Custom alert conditions
-- Preset configurations
-- Widget system
+- Custom alert conditions for sessions and kill zones
+- Alert on FVG formations
+- Preset configurations for different trading styles
+- Widget system for quick access
+- Export/import settings
 
-### Phase 5: Full Trading Suite (Future)
+### Phase 5: Full Trading Suite (Planned)
 
-- Theme system
-- Advanced customization
+- Theme system with color presets
+- Advanced customization engine
 - Multi-indicator coordination
+- Performance optimization
+- Educational tooltips and guides
 
 ---
 
-## ✅ Acceptance Criteria (Phase 1)
+## ✅ Acceptance Criteria
+
+### Phase 1 Criteria
 
 | Criterion                    | Status |
 | ---------------------------- | ------ |
@@ -200,10 +400,25 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 | Symbol auto-updates          | ✅     |
 | Timeframe auto-updates       | ✅     |
 | Style controls functional    | ✅     |
-| Only one label instance      | ✅     |
-| Toggle hides label           | ✅     |
+| Only one table instance      | ✅     |
+| Toggle hides watermark       | ✅     |
 | No script errors             | ✅     |
 | Works all symbols/timeframes | ✅     |
+
+### Phase 2 Criteria
+
+| Criterion                          | Status |
+| ---------------------------------- | ------ |
+| Sessions detect correctly          | ✅     |
+| Timezone adjustment works          | ✅     |
+| Session highs/lows accurate        | ✅     |
+| Kill zones render properly         | ✅     |
+| All toggles function               | ✅     |
+| Custom times adjust kill zones     | ✅     |
+| Labels display correctly           | ✅     |
+| No interference with watermark     | ✅     |
+| Performance optimized              | ✅     |
+| Works across all sessions/timeframes | ✅     |
 
 ---
 
@@ -238,12 +453,26 @@ Obsidian is a multi-purpose TradingView indicator designed as a clean foundation
 
 ## 📋 Version History
 
+### v2.0.0 - Phase 2 (2025-11-24)
+
+- ✨ Major feature release: Sessions & Kill Zones
+- ✅ Three major trading sessions (Asian, London, New York)
+- ✅ Customizable timezone support (UTC-12 to UTC+12)
+- ✅ Session high/low horizontal lines with custom labels
+- ✅ Session open/close vertical markers
+- ✅ Kill zone boxes with full customization
+- ✅ Optional session background boxes
+- ✅ Individual toggle controls for all features
+- ✅ Complete color and style customization
+- ✅ Reorganized settings into logical zones
+- ✅ No interference with existing watermark functionality
+
 ### v1.0.0 - Phase 1 (2025-11-23)
 
 - ✨ Initial release
 - ✅ Customizable watermark overlay
 - ✅ Symbol and timeframe display
-- ✅ Custom notes support
+- ✅ Custom subtitle cells
 - ✅ Full style customization
 - ✅ Auto-refresh functionality
 - ✅ Performance optimized

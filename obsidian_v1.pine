@@ -3,24 +3,33 @@ indicator("Obsidian", shorttitle="OBS", overlay=true)
 
 // ══════════════════════════════════════════════════════════════════════════════
 // OBSIDIAN - TradingView All-in-One Indicator
-// Phase 1: Watermark Foundation
+// Phase 1 + 2: Watermark Foundation + Sessions & Kill Zones
 //
-// Purpose: Clean, customizable watermark with foundation for future ICT features
-// Version: 1.0.0
+// Purpose: ICT-focused trading indicator with sessions, kill zones, and watermark
+// Version: 2.2.0 (Timezone Selector + Time String Inputs + Layout Reorganization)
 // Author: Generated via Claude Code
-// Date: 2025-11-23
+// Date: 2025-11-24
 //
-// Phase 1 Features:
-// - Customizable watermark overlay
+// Phase 1 Features (Completed):
+// - Customizable watermark overlay with dual-line display
 // - Symbol and timeframe display
-// - Custom notes support
+// - Custom subtitle cells
 // - Full style customization (color, size, position, transparency)
 // - Auto-refresh on symbol/timeframe changes
-// - Performance optimized (single label instance)
+// - Performance optimized (single table instance)
+//
+// Phase 2 Features (Completed):
+// - Asian, London, and New York trading sessions
+// - Timezone selector (GMT+0 and GMT-5)
+// - Session high/low horizontal lines with labels
+// - Session open/close markers (vertical lines)
+// - Kill zone boxes with time string inputs (HH:MM format)
+// - Optional session background boxes
+// - Full customization for all sessions and kill zones
+// - Independent toggle controls for each element
 //
 // Future Roadmap:
-// - Phase 2: Kill zones, sessions, session highs/lows
-// - Phase 3: Market structure, liquidity zones, FVGs
+// - Phase 3: Market structure, liquidity zones, FVGs, order blocks
 // - Phase 4: Alerts, widgets, presets
 // - Phase 5: Full trading suite & themes
 // ══════════════════════════════════════════════════════════════════════════════
@@ -31,50 +40,202 @@ indicator("Obsidian", shorttitle="OBS", overlay=true)
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Define input group constants for organized UI
-var string GRP_DISPLAY = "Display Settings"
-var string GRP_CONTENT = "Content"
-var string GRP_STYLE = "Style"
+var string GRP_WATERMARK = "═══ WATERMARK ═══"
+var string GRP_WATERMARK_CONTENT = "Watermark Content"
+var string GRP_WATERMARK_STYLE = "Watermark Style"
+var string GRP_TIMEZONES = "═══ TIME ZONES ═══"
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATERMARK - Display Toggle
+// ─────────────────────────────────────────────────────────────────────────────
+
+showWatermark = input.bool(true, "Show Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_WATERMARK)
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DISPLAY SETTINGS
+// WATERMARK - Content Settings (Line 1: Title)
 // ─────────────────────────────────────────────────────────────────────────────
 
-showWatermark = input.bool(true, "Show Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_DISPLAY)
+titleText = input.string("", "Title Text", tooltip="Custom title text for line 1", group=GRP_WATERMARK_CONTENT)
 
+showSymbol = input.bool(true, "Show Symbol", inline="content01", tooltip="Display current symbol ticker in title", group=GRP_WATERMARK_CONTENT)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTENT SETTINGS - LINE 1 (Title)
-// ─────────────────────────────────────────────────────────────────────────────
-
-titleText = input.string("", "Title Text", tooltip="Custom title text for line 1", group=GRP_CONTENT)
-
-showSymbol = input.bool(true, "Show Symbol", inline="content01", tooltip="Display current symbol ticker in title", group=GRP_CONTENT)
-
-showTimeframe = input.bool(true, "Show Timeframe", inline="content01", tooltip="Display current chart timeframe in title", group=GRP_CONTENT)
+showTimeframe = input.bool(true, "Show Timeframe", inline="content01", tooltip="Display current chart timeframe in title", group=GRP_WATERMARK_CONTENT)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONTENT SETTINGS - LINE 2 (Subtitles)
+// WATERMARK - Content Settings (Line 2: Subtitles)
 // ─────────────────────────────────────────────────────────────────────────────
 
-subtitle1 = input.string("", "Subtitle 1", inline="content02", tooltip="First subtitle cell", group=GRP_CONTENT)
+subtitle1 = input.string("", "Subtitle 1", inline="content02", tooltip="First subtitle cell", group=GRP_WATERMARK_CONTENT)
 
-subtitle2 = input.string("", "Subtitle 2", inline="content02", tooltip="Second subtitle cell", group=GRP_CONTENT)
+subtitle2 = input.string("", "Subtitle 2", inline="content02", tooltip="Second subtitle cell", group=GRP_WATERMARK_CONTENT)
 
-subtitle3 = input.string("", "Subtitle 3", inline="content02", tooltip="Third subtitle cell", group=GRP_CONTENT)
+subtitle3 = input.string("", "Subtitle 3", inline="content02", tooltip="Third subtitle cell", group=GRP_WATERMARK_CONTENT)
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STYLE SETTINGS
+// WATERMARK - Style Settings
 // ─────────────────────────────────────────────────────────────────────────────
 
-textColor = input.color(color.new(color.white, 0), "Text Color", inline="style01", tooltip="Choose watermark text color", group=GRP_STYLE)
+textColor = input.color(color.new(color.white, 0), "Text Color", inline="style01", tooltip="Choose watermark text color", group=GRP_WATERMARK_STYLE)
 
-transparency = input.int(50, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_STYLE)
+transparency = input.int(50, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_WATERMARK_STYLE)
 
-fontSize = input.string(size.normal, "Font Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], inline="style02", tooltip="Select watermark text size", group=GRP_STYLE)
+fontSize = input.string(size.normal, "Font Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], inline="style02", tooltip="Select watermark text size", group=GRP_WATERMARK_STYLE)
 
-position = input.string("Center", "Position", options=["Left", "Center", "Right"], inline="style02", tooltip="Horizontal alignment of watermark", group=GRP_STYLE)
+position = input.string("Center", "Position", options=["Left", "Center", "Right"], inline="style02", tooltip="Horizontal alignment of watermark", group=GRP_WATERMARK_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSIONS & KILL ZONES SETTINGS (Phase 2)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Define session/kill zone input groups
+var string GRP_SESSIONS = "═══ SESSIONS ═══"
+var string GRP_SESSION_TIMES = "Session Times"
+var string GRP_SESSION_STYLE = "Session Style"
+var string GRP_KILLZONES = "═══ KILL ZONES ═══"
+var string GRP_KZ_STYLE = "Kill Zone Style"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIMEZONE CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Timezone selector - choose your preferred timezone for session display
+userTimezone = input.string("GMT-5", "User Timezone", options=["GMT+0", "GMT-5"], tooltip="Select your timezone reference:\n• GMT+0 (Greenwich Mean Time)\n• GMT-5 (New York / EST)", group=GRP_TIMEZONES)
+
+// Get timezone offset in hours
+getTimezoneOffset() =>
+    userTimezone == "GMT+0" ? 0 : -5
+
+timezoneOffset = getTimezoneOffset()
+
+// Informational tooltip to explain timezone system
+timezoneInfo = input.string("ℹ️ Timezone Settings", "Session Times Reference", tooltip="⏰ SESSION TIMES IN YOUR SELECTED TIMEZONE\n\nSelect your timezone above (GMT+0 or GMT-5)\n\n📍 Default Times:\n• Asian: 00:00-09:00\n• London: 08:00-16:00\n• NY: 13:00-22:00\n\nNote: All times are displayed in your selected timezone.\nTimes will automatically adjust based on your timezone selection.\n\n💡 Time Format: HH:MM (24-hour format)\nExamples: 09:30, 13:00, 17:45", group=GRP_TIMEZONES)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Display Toggles
+// ─────────────────────────────────────────────────────────────────────────────
+
+showSessions = input.bool(true, "Show All Sessions", tooltip="Master toggle for all session displays", group=GRP_SESSIONS)
+
+showAsianSession = input.bool(true, "Asian Session", inline="sess01", tooltip="Tokyo session", group=GRP_SESSIONS)
+showLondonSession = input.bool(true, "London Session", inline="sess01", tooltip="London session", group=GRP_SESSIONS)
+showNYSession = input.bool(true, "New York Session", inline="sess01", tooltip="New York session", group=GRP_SESSIONS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Custom Time Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Asian Session Times
+asianStartTime = input.string("00:00", "Asian Start Time", inline="time01", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+asianEndTime = input.string("09:00", "End Time", inline="time01", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
+
+// London Session Times
+londonStartTime = input.string("08:00", "London Start Time", inline="time02", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+londonEndTime = input.string("16:00", "End Time", inline="time02", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
+
+// New York Session Times
+nyStartTime = input.string("13:00", "NY Start Time", inline="time03", tooltip="Session start time in HH:MM format (24-hour). Example: 09:30", group=GRP_SESSION_TIMES)
+nyEndTime = input.string("22:00", "End Time", inline="time03", tooltip="Session end time in HH:MM format (24-hour). End time is INCLUSIVE.", group=GRP_SESSION_TIMES)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Session High/Low/Open/Close Markers
+// ─────────────────────────────────────────────────────────────────────────────
+
+showSessionHighs = input.bool(true, "Session Highs", inline="mark01", tooltip="Show horizontal lines at session highs", group=GRP_SESSIONS)
+showSessionLows = input.bool(true, "Session Lows", inline="mark01", tooltip="Show horizontal lines at session lows", group=GRP_SESSIONS)
+
+showSessionOpen = input.bool(true, "Session Open", inline="mark02", tooltip="Mark session open with vertical line", group=GRP_SESSIONS)
+showSessionClose = input.bool(true, "Session Close", inline="mark02", tooltip="Mark session close with vertical line", group=GRP_SESSIONS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Custom Labels
+// ─────────────────────────────────────────────────────────────────────────────
+
+asianLabel = input.string("Asian", "Asian Label", inline="label01", tooltip="Custom label for Asian session", group=GRP_SESSIONS)
+londonLabel = input.string("London", "London Label", inline="label01", tooltip="Custom label for London session", group=GRP_SESSIONS)
+nyLabel = input.string("New York", "NY Label", inline="label01", tooltip="Custom label for NY session", group=GRP_SESSIONS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Style Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Session Line Colors
+asianColor = input.color(color.new(color.yellow, 0), "Asian Color", inline="color01", group=GRP_SESSION_STYLE)
+londonColor = input.color(color.new(color.blue, 0), "London Color", inline="color01", group=GRP_SESSION_STYLE)
+nyColor = input.color(color.new(color.green, 0), "NY Color", inline="color01", group=GRP_SESSION_STYLE)
+
+// Session Background (optional)
+showSessionBg = input.bool(false, "Show Session Background", tooltip="Enable background color for sessions", group=GRP_SESSION_STYLE)
+sessionBgTransparency = input.int(90, "BG Transparency", minval=0, maxval=100, tooltip="Background transparency (0=opaque, 100=transparent)", group=GRP_SESSION_STYLE)
+
+// Line Width and Style
+sessionLineWidth = input.int(1, "Line Width", minval=1, maxval=5, inline="style01", tooltip="Session line thickness", group=GRP_SESSION_STYLE)
+sessionLineStyle = input.string("Solid", "Line Style", options=["Solid", "Dashed", "Dotted"], inline="style01", group=GRP_SESSION_STYLE)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KILL ZONES - Display Toggles and Settings (Reorganized Layout)
+// ─────────────────────────────────────────────────────────────────────────────
+
+showKillZones = input.bool(true, "Show Killzone Boxes", tooltip="Master toggle for kill zone box displays", group=GRP_KILLZONES)
+showKZLabels = input.bool(true, "Display Text", tooltip="Show text labels on kill zones", group=GRP_KILLZONES)
+
+// Asian Kill Zone
+showAsianKZ = input.bool(true, "", inline="kz01", group=GRP_KILLZONES)
+asianKZLabel = input.string("Asia", "", inline="kz01", tooltip="Kill zone name", group=GRP_KILLZONES)
+asianKZStartTime = input.string("20:00", "", inline="kz01", tooltip="Start time in HH:MM format", group=GRP_KILLZONES)
+asianKZEndTime = input.string("00:00", "", inline="kz01", tooltip="End time in HH:MM format", group=GRP_KILLZONES)
+asianKZColor = input.color(color.new(color.blue, 85), "", inline="kz01", group=GRP_KILLZONES)
+
+// London Kill Zone
+showLondonKZ = input.bool(true, "", inline="kz02", group=GRP_KILLZONES)
+londonKZLabel = input.string("London", "", inline="kz02", tooltip="Kill zone name", group=GRP_KILLZONES)
+londonKZStartTime = input.string("02:00", "", inline="kz02", tooltip="Start time in HH:MM format", group=GRP_KILLZONES)
+londonKZEndTime = input.string("05:00", "", inline="kz02", tooltip="End time in HH:MM format", group=GRP_KILLZONES)
+londonKZColor = input.color(color.new(color.red, 85), "", inline="kz02", group=GRP_KILLZONES)
+
+// NY AM Kill Zone
+showNYAMKZ = input.bool(true, "", inline="kz03", group=GRP_KILLZONES)
+nyAMKZLabel = input.string("NY AM", "", inline="kz03", tooltip="Kill zone name", group=GRP_KILLZONES)
+nyAMKZStartTime = input.string("09:30", "", inline="kz03", tooltip="Start time in HH:MM format", group=GRP_KILLZONES)
+nyAMKZEndTime = input.string("11:00", "", inline="kz03", tooltip="End time in HH:MM format", group=GRP_KILLZONES)
+nyAMKZColor = input.color(color.new(color.teal, 85), "", inline="kz03", group=GRP_KILLZONES)
+
+// NY Lunch Kill Zone
+showNYLunchKZ = input.bool(true, "", inline="kz04", group=GRP_KILLZONES)
+nyLunchKZLabel = input.string("NY Lunch", "", inline="kz04", tooltip="Kill zone name", group=GRP_KILLZONES)
+nyLunchKZStartTime = input.string("12:00", "", inline="kz04", tooltip="Start time in HH:MM format", group=GRP_KILLZONES)
+nyLunchKZEndTime = input.string("13:00", "", inline="kz04", tooltip="End time in HH:MM format", group=GRP_KILLZONES)
+nyLunchKZColor = input.color(color.new(color.yellow, 85), "", inline="kz04", group=GRP_KILLZONES)
+
+// NY PM Kill Zone
+showNYPMKZ = input.bool(true, "", inline="kz05", group=GRP_KILLZONES)
+nyPMKZLabel = input.string("NY PM", "", inline="kz05", tooltip="Kill zone name", group=GRP_KILLZONES)
+nyPMKZStartTime = input.string("13:30", "", inline="kz05", tooltip="Start time in HH:MM format", group=GRP_KILLZONES)
+nyPMKZEndTime = input.string("16:00", "", inline="kz05", tooltip="End time in HH:MM format", group=GRP_KILLZONES)
+nyPMKZColor = input.color(color.new(color.purple, 85), "", inline="kz05", group=GRP_KILLZONES)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KILL ZONES - Style Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Kill Zone Transparency
+kzTransparency = input.int(85, "KZ Transparency", minval=0, maxval=100, tooltip="Kill zone box transparency", group=GRP_KZ_STYLE)
+
+// Kill Zone Border
+showKZBorder = input.bool(true, "Show KZ Border", inline="kzborder01", tooltip="Show border on kill zone boxes", group=GRP_KZ_STYLE)
+kzBorderColor = input.color(color.new(color.white, 50), "Border Color", inline="kzborder01", group=GRP_KZ_STYLE)
+kzBorderWidth = input.int(1, "Width", minval=1, maxval=5, inline="kzborder01", group=GRP_KZ_STYLE)
+
+// Kill Zone Text Labels
+kzLabelSize = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], inline="kztext01", group=GRP_KZ_STYLE)
+kzLabelColor = input.color(color.new(color.white, 0), "Label Color", inline="kztext01", group=GRP_KZ_STYLE)
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -196,13 +357,358 @@ if barstate.islast
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FUTURE EXPANSION HOOKS
+// PHASE 2: SESSIONS & KILL ZONES LOGIC
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Phase 2: Kill zones and sessions
-// - Add session detection logic
-// - Implement kill zone highlighting
-// - Session high/low tracking
+// ─────────────────────────────────────────────────────────────────────────────
+// TIMEZONE REFERENCE SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+// All session detection uses hour(time, "GMT+0") + timezone offset
+// This ensures sessions align with the user's selected timezone
+// Benefits:
+// - Sessions display in user's chosen timezone (GMT+0 or GMT-5)
+// - Consistent time display regardless of chart timezone setting
+// - User can choose their preferred timezone reference
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIME PARSING HELPER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Parse time string "HH:MM" into hours and minutes
+parseTime(timeStr) =>
+    colonPos = str.pos(timeStr, ":")
+    hours = str.tonumber(str.substring(timeStr, 0, colonPos))
+    minutes = str.tonumber(str.substring(timeStr, colonPos + 1))
+    [hours, minutes]
+
+// Convert time to total minutes since midnight
+timeToMinutes(timeStr) =>
+    [hours, minutes] = parseTime(timeStr)
+    hours * 60 + minutes
+
+// Get current time in minutes (adjusted for user's selected timezone)
+getCurrentTimeMinutes() =>
+    currentHour = hour(time, "GMT+0") + timezoneOffset
+    currentMinute = minute(time)
+
+    // Handle timezone offset that crosses day boundary
+    if currentHour < 0
+        currentHour := currentHour + 24
+    else if currentHour >= 24
+        currentHour := currentHour - 24
+
+    currentHour * 60 + currentMinute
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION DETECTION FUNCTIONS (Updated for Time Strings)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Check if current bar is within a session (using time strings)
+inSessionTime(startTimeStr, endTimeStr) =>
+    currentMinutes = getCurrentTimeMinutes()
+    startMinutes = timeToMinutes(startTimeStr)
+    endMinutes = timeToMinutes(endTimeStr)
+
+    // Handle sessions that cross midnight
+    if startMinutes < endMinutes
+        currentMinutes >= startMinutes and currentMinutes <= endMinutes
+    else
+        currentMinutes >= startMinutes or currentMinutes <= endMinutes
+
+// Detect session start (using time strings)
+isSessionStartTime(startTimeStr) =>
+    currentMinutes = getCurrentTimeMinutes()
+    prevMinutes = getCurrentTimeMinutes() - timeframe.multiplier
+    startMinutes = timeToMinutes(startTimeStr)
+
+    currentMinutes >= startMinutes and prevMinutes < startMinutes
+
+// Detect session end (using time strings)
+isSessionEndTime(endTimeStr) =>
+    currentMinutes = getCurrentTimeMinutes()
+    prevMinutes = getCurrentTimeMinutes() - timeframe.multiplier
+    endMinutes = timeToMinutes(endTimeStr)
+
+    currentMinutes > endMinutes and prevMinutes <= endMinutes
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION STATE TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Track session highs and lows
+var float asianSessionHigh = na
+var float asianSessionLow = na
+var float londonSessionHigh = na
+var float londonSessionLow = na
+var float nySessionHigh = na
+var float nySessionLow = na
+
+// Track session open/close prices
+var float asianSessionOpen = na
+var float londonSessionOpen = na
+var float nySessionOpen = na
+
+// Track session start bars for box/line drawing
+var int asianSessionStartBar = na
+var int londonSessionStartBar = na
+var int nySessionStartBar = na
+
+// Asian Session Tracking
+if showSessions and showAsianSession
+    if isSessionStartTime(asianStartTime)
+        asianSessionHigh := high
+        asianSessionLow := low
+        asianSessionOpen := open
+        asianSessionStartBar := bar_index
+    else if inSessionTime(asianStartTime, asianEndTime)
+        asianSessionHigh := math.max(asianSessionHigh, high)
+        asianSessionLow := math.min(asianSessionLow, low)
+
+// London Session Tracking
+if showSessions and showLondonSession
+    if isSessionStartTime(londonStartTime)
+        londonSessionHigh := high
+        londonSessionLow := low
+        londonSessionOpen := open
+        londonSessionStartBar := bar_index
+    else if inSessionTime(londonStartTime, londonEndTime)
+        londonSessionHigh := math.max(londonSessionHigh, high)
+        londonSessionLow := math.min(londonSessionLow, low)
+
+// New York Session Tracking
+if showSessions and showNYSession
+    if isSessionStartTime(nyStartTime)
+        nySessionHigh := high
+        nySessionLow := low
+        nySessionOpen := open
+        nySessionStartBar := bar_index
+    else if inSessionTime(nyStartTime, nyEndTime)
+        nySessionHigh := math.max(nySessionHigh, high)
+        nySessionLow := math.min(nySessionLow, low)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION LINES RENDERING (High/Low/Open/Close)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Convert line style string to Pine Script constant
+getLineStyle() =>
+    if sessionLineStyle == "Dashed"
+        line.style_dashed
+    else if sessionLineStyle == "Dotted"
+        line.style_dotted
+    else
+        line.style_solid
+
+lineStyle = getLineStyle()
+
+// Draw session high/low lines at session end
+if showSessions
+    // Asian Session Lines
+    if showAsianSession and isSessionEndTime(asianEndTime)
+        if showSessionHighs and not na(asianSessionHigh)
+            line.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionHigh, color=asianColor, width=sessionLineWidth, style=lineStyle)
+            if asianLabel != ""
+                label.new(bar_index, asianSessionHigh, asianLabel + " H", color=color.new(color.black, 100), textcolor=asianColor, size=size.small, style=label.style_label_left)
+
+        if showSessionLows and not na(asianSessionLow)
+            line.new(asianSessionStartBar, asianSessionLow, bar_index, asianSessionLow, color=asianColor, width=sessionLineWidth, style=lineStyle)
+            if asianLabel != ""
+                label.new(bar_index, asianSessionLow, asianLabel + " L", color=color.new(color.black, 100), textcolor=asianColor, size=size.small, style=label.style_label_left)
+
+    // London Session Lines
+    if showLondonSession and isSessionEndTime(londonEndTime)
+        if showSessionHighs and not na(londonSessionHigh)
+            line.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionHigh, color=londonColor, width=sessionLineWidth, style=lineStyle)
+            if londonLabel != ""
+                label.new(bar_index, londonSessionHigh, londonLabel + " H", color=color.new(color.black, 100), textcolor=londonColor, size=size.small, style=label.style_label_left)
+
+        if showSessionLows and not na(londonSessionLow)
+            line.new(londonSessionStartBar, londonSessionLow, bar_index, londonSessionLow, color=londonColor, width=sessionLineWidth, style=lineStyle)
+            if londonLabel != ""
+                label.new(bar_index, londonSessionLow, londonLabel + " L", color=color.new(color.black, 100), textcolor=londonColor, size=size.small, style=label.style_label_left)
+
+    // New York Session Lines
+    if showNYSession and isSessionEndTime(nyEndTime)
+        if showSessionHighs and not na(nySessionHigh)
+            line.new(nySessionStartBar, nySessionHigh, bar_index, nySessionHigh, color=nyColor, width=sessionLineWidth, style=lineStyle)
+            if nyLabel != ""
+                label.new(bar_index, nySessionHigh, nyLabel + " H", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
+
+        if showSessionLows and not na(nySessionLow)
+            line.new(nySessionStartBar, nySessionLow, bar_index, nySessionLow, color=nyColor, width=sessionLineWidth, style=lineStyle)
+            if nyLabel != ""
+                label.new(bar_index, nySessionLow, nyLabel + " L", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
+
+// Draw session open/close markers (vertical lines)
+if showSessions
+    if showSessionOpen
+        if showAsianSession and isSessionStartTime(asianStartTime)
+            line.new(bar_index, low, bar_index, high, color=asianColor, width=1, style=line.style_dotted)
+        if showLondonSession and isSessionStartTime(londonStartTime)
+            line.new(bar_index, low, bar_index, high, color=londonColor, width=1, style=line.style_dotted)
+        if showNYSession and isSessionStartTime(nyStartTime)
+            line.new(bar_index, low, bar_index, high, color=nyColor, width=1, style=line.style_dotted)
+
+    if showSessionClose
+        if showAsianSession and isSessionEndTime(asianEndTime)
+            line.new(bar_index, low, bar_index, high, color=asianColor, width=1, style=line.style_dotted)
+        if showLondonSession and isSessionEndTime(londonEndTime)
+            line.new(bar_index, low, bar_index, high, color=londonColor, width=1, style=line.style_dotted)
+        if showNYSession and isSessionEndTime(nyEndTime)
+            line.new(bar_index, low, bar_index, high, color=nyColor, width=1, style=line.style_dotted)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KILL ZONES BOX RENDERING (Updated for New Layout and Time Strings)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Track kill zone start bars and high/low
+var int asianKZStartBar = na
+var float asianKZHigh = na
+var float asianKZLow = na
+
+var int londonKZStartBar = na
+var float londonKZHigh = na
+var float londonKZLow = na
+
+var int nyAMKZStartBar = na
+var float nyAMKZHigh = na
+var float nyAMKZLow = na
+
+var int nyLunchKZStartBar = na
+var float nyLunchKZHigh = na
+var float nyLunchKZLow = na
+
+var int nyPMKZStartBar = na
+var float nyPMKZHigh = na
+var float nyPMKZLow = na
+
+// Check if in kill zones
+inAsianKZ = inSessionTime(asianKZStartTime, asianKZEndTime)
+inLondonKZ = inSessionTime(londonKZStartTime, londonKZEndTime)
+inNYAMKZ = inSessionTime(nyAMKZStartTime, nyAMKZEndTime)
+inNYLunchKZ = inSessionTime(nyLunchKZStartTime, nyLunchKZEndTime)
+inNYPMKZ = inSessionTime(nyPMKZStartTime, nyPMKZEndTime)
+
+// Track Asian Kill Zone
+if showKillZones and showAsianKZ
+    if isSessionStartTime(asianKZStartTime)
+        asianKZStartBar := bar_index
+        asianKZHigh := high
+        asianKZLow := low
+    else if inAsianKZ
+        asianKZHigh := math.max(asianKZHigh, high)
+        asianKZLow := math.min(asianKZLow, low)
+    else if isSessionEndTime(asianKZEndTime) and not na(asianKZStartBar)
+        kzColor = color.new(asianKZColor, kzTransparency)
+        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+        box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+        if showKZLabels and asianKZLabel != ""
+            label.new(bar_index, asianKZHigh, asianKZLabel, color=color.new(asianKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+// Track London Kill Zone
+if showKillZones and showLondonKZ
+    if isSessionStartTime(londonKZStartTime)
+        londonKZStartBar := bar_index
+        londonKZHigh := high
+        londonKZLow := low
+    else if inLondonKZ
+        londonKZHigh := math.max(londonKZHigh, high)
+        londonKZLow := math.min(londonKZLow, low)
+    else if isSessionEndTime(londonKZEndTime) and not na(londonKZStartBar)
+        kzColor = color.new(londonKZColor, kzTransparency)
+        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+        box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+        if showKZLabels and londonKZLabel != ""
+            label.new(bar_index, londonKZHigh, londonKZLabel, color=color.new(londonKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+// Track NY AM Kill Zone
+if showKillZones and showNYAMKZ
+    if isSessionStartTime(nyAMKZStartTime)
+        nyAMKZStartBar := bar_index
+        nyAMKZHigh := high
+        nyAMKZLow := low
+    else if inNYAMKZ
+        nyAMKZHigh := math.max(nyAMKZHigh, high)
+        nyAMKZLow := math.min(nyAMKZLow, low)
+    else if isSessionEndTime(nyAMKZEndTime) and not na(nyAMKZStartBar)
+        kzColor = color.new(nyAMKZColor, kzTransparency)
+        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+        box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+        if showKZLabels and nyAMKZLabel != ""
+            label.new(bar_index, nyAMKZHigh, nyAMKZLabel, color=color.new(nyAMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+// Track NY Lunch Kill Zone
+if showKillZones and showNYLunchKZ
+    if isSessionStartTime(nyLunchKZStartTime)
+        nyLunchKZStartBar := bar_index
+        nyLunchKZHigh := high
+        nyLunchKZLow := low
+    else if inNYLunchKZ
+        nyLunchKZHigh := math.max(nyLunchKZHigh, high)
+        nyLunchKZLow := math.min(nyLunchKZLow, low)
+    else if isSessionEndTime(nyLunchKZEndTime) and not na(nyLunchKZStartBar)
+        kzColor = color.new(nyLunchKZColor, kzTransparency)
+        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+        box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+        if showKZLabels and nyLunchKZLabel != ""
+            label.new(bar_index, nyLunchKZHigh, nyLunchKZLabel, color=color.new(nyLunchKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+// Track NY PM Kill Zone
+if showKillZones and showNYPMKZ
+    if isSessionStartTime(nyPMKZStartTime)
+        nyPMKZStartBar := bar_index
+        nyPMKZHigh := high
+        nyPMKZLow := low
+    else if inNYPMKZ
+        nyPMKZHigh := math.max(nyPMKZHigh, high)
+        nyPMKZLow := math.min(nyPMKZLow, low)
+    else if isSessionEndTime(nyPMKZEndTime) and not na(nyPMKZStartBar)
+        kzColor = color.new(nyPMKZColor, kzTransparency)
+        borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
+        box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
+
+        if showKZLabels and nyPMKZLabel != ""
+            label.new(bar_index, nyPMKZHigh, nyPMKZLabel, color=color.new(nyPMKZColor, kzTransparency), textcolor=kzLabelColor, size=kzLabelSize, style=label.style_label_down)
+
+// Optional session background boxes
+if showSessions and showSessionBg
+    var int asianBgStartBar = na
+    var int londonBgStartBar = na
+    var int nyBgStartBar = na
+
+    // Asian Session Background
+    if showAsianSession
+        if isSessionStartTime(asianStartTime)
+            asianBgStartBar := bar_index
+        else if isSessionEndTime(asianEndTime) and not na(asianBgStartBar)
+            bgColor = color.new(asianColor, sessionBgTransparency)
+            box.new(asianBgStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
+
+    // London Session Background
+    if showLondonSession
+        if isSessionStartTime(londonStartTime)
+            londonBgStartBar := bar_index
+        else if isSessionEndTime(londonEndTime) and not na(londonBgStartBar)
+            bgColor = color.new(londonColor, sessionBgTransparency)
+            box.new(londonBgStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
+
+    // New York Session Background
+    if showNYSession
+        if isSessionStartTime(nyStartTime)
+            nyBgStartBar := bar_index
+        else if isSessionEndTime(nyEndTime) and not na(nyBgStartBar)
+            bgColor = color.new(nyColor, sessionBgTransparency)
+            box.new(nyBgStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FUTURE EXPANSION HOOKS (Phase 3-5)
+// ══════════════════════════════════════════════════════════════════════════════
 
 // Phase 3: Market structure
 // - Fair Value Gaps (FVG) detection
@@ -222,5 +728,5 @@ if barstate.islast
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// END OF OBSIDIAN PHASE 1
+// END OF OBSIDIAN PHASE 2
 // ══════════════════════════════════════════════════════════════════════════════
