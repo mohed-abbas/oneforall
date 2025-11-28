@@ -1,0 +1,563 @@
+//@version=6
+indicator("Obsidian", shorttitle="OBS", overlay=true, max_lines_count=500, max_boxes_count=500, max_labels_count=500)
+
+// ══════════════════════════════════════════════════════════════════════════════
+// OBSIDIAN - TradingView All-in-One Indicator
+// Phase 2.5: Hybrid Architecture (Inspiration + Custom UI)
+//
+// Purpose: ICT-focused trading indicator with sessions, kill zones, and watermark
+// Version: 2.5.0 (Hybrid Implementation - Robust Session Detection)
+// Author: Generated via Claude Code
+// Date: 2025-11-28
+//
+// Major Changes in v2.5.0:
+// - Replaced manual time detection with Pine's native time() function
+// - Universal timezone support (GMT-12 to GMT+14)
+// - Session input format changed to "HHMM-HHMM" (e.g., "0000-0900")
+// - Array-based kill zone tracking for multi-day support
+// - Drawing limit management system (max_days parameter)
+// - Improved performance and reliability
+//
+// Phase 1 Features (Completed):
+// - Customizable watermark overlay with dual-line display
+// - Symbol and timeframe display
+// - Custom subtitle cells
+// - Full style customization (color, size, position, transparency)
+// - Auto-refresh on symbol/timeframe changes
+// - Performance optimized (single table instance)
+//
+// Phase 2 Features (Completed):
+// - Asian, London, and New York trading sessions
+// - Universal timezone selector (GMT-12 to GMT+14)
+// - Session high/low horizontal lines with labels
+// - Session open/close markers (vertical lines)
+// - Kill zone boxes with session string inputs
+// - Optional session background boxes
+// - Full customization for all sessions and kill zones
+// - Independent toggle controls for each element
+// - Multi-day kill zone history tracking
+// - Drawing limit management
+//
+// Future Roadmap:
+// - Phase 3: Market structure, liquidity zones, FVGs, order blocks
+// - Phase 4: Alerts, widgets, presets
+// - Phase 5: Full trading suite & themes
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INPUT GROUPS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Define input group constants for organized UI
+var string GRP_SETTINGS = "═══ SETTINGS ═══"
+var string GRP_WATERMARK = "═══ WATERMARK ═══"
+var string GRP_WATERMARK_CONTENT = "Watermark Content"
+var string GRP_WATERMARK_STYLE = "Watermark Style"
+var string GRP_SESSIONS = "═══ SESSIONS ═══"
+var string GRP_SESSION_STYLE = "Session Style"
+var string GRP_KILLZONES = "═══ KILL ZONES ═══"
+var string GRP_KZ_STYLE = "Kill Zone Style"
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GLOBAL SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+max_days = input.int(3, "Drawing Limit (Days)", minval=1, maxval=10, tooltip="Maximum number of days to display for sessions and kill zones. Keeps chart clean and performant.", group=GRP_SETTINGS)
+
+gmt_tz = input.string('GMT-5', "Timezone", options=['GMT-12','GMT-11','GMT-10','GMT-9','GMT-8','GMT-7','GMT-6','GMT-5','GMT-4','GMT-3','GMT-2','GMT-1','GMT+0','GMT+1','GMT+2','GMT+3','GMT+4','GMT+5','GMT+6','GMT+7','GMT+8','GMT+9','GMT+10','GMT+11','GMT+12','GMT+13','GMT+14'], tooltip="Select your timezone. All session times will be displayed in this timezone.\n\nNote: GMT does not automatically adjust for Daylight Saving Time.", group=GRP_SETTINGS)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATERMARK - Display Toggle
+// ─────────────────────────────────────────────────────────────────────────────
+
+showWatermark = input.bool(true, "Show Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_WATERMARK)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATERMARK - Content Settings (Line 1: Title)
+// ─────────────────────────────────────────────────────────────────────────────
+
+titleText = input.string("", "Title Text", tooltip="Custom title text for line 1", group=GRP_WATERMARK_CONTENT)
+
+showSymbol = input.bool(true, "Show Symbol", inline="content01", tooltip="Display current symbol ticker in title", group=GRP_WATERMARK_CONTENT)
+
+showTimeframe = input.bool(true, "Show Timeframe", inline="content01", tooltip="Display current chart timeframe in title", group=GRP_WATERMARK_CONTENT)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATERMARK - Content Settings (Line 2: Subtitles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+subtitle1 = input.string("", "Subtitle 1", inline="content02", tooltip="First subtitle cell", group=GRP_WATERMARK_CONTENT)
+
+subtitle2 = input.string("", "Subtitle 2", inline="content02", tooltip="Second subtitle cell", group=GRP_WATERMARK_CONTENT)
+
+subtitle3 = input.string("", "Subtitle 3", inline="content02", tooltip="Third subtitle cell", group=GRP_WATERMARK_CONTENT)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WATERMARK - Style Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+textColor = input.color(color.new(color.white, 0), "Text Color", inline="style01", tooltip="Choose watermark text color", group=GRP_WATERMARK_STYLE)
+
+transparency = input.int(50, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_WATERMARK_STYLE)
+
+fontSize = input.string(size.normal, "Font Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], inline="style02", tooltip="Select watermark text size", group=GRP_WATERMARK_STYLE)
+
+position = input.string("Center", "Position", options=["Left", "Center", "Right"], inline="style02", tooltip="Horizontal alignment of watermark", group=GRP_WATERMARK_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSIONS SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Display Toggles and Session Strings
+// ─────────────────────────────────────────────────────────────────────────────
+
+showSessions = input.bool(true, "Show All Sessions", tooltip="Master toggle for all session displays", group=GRP_SESSIONS)
+
+// Asian Session
+show_asian = input.bool(true, "", inline="sess_asian", group=GRP_SESSIONS)
+asian_txt = input.string("Asian", "", inline="sess_asian", group=GRP_SESSIONS)
+asian_ses = input.session("0000-0900", "", inline="sess_asian", tooltip="Asian session time range in HHMM-HHMM format", group=GRP_SESSIONS)
+asian_css = input.color(color.new(color.yellow, 0), "", inline="sess_asian", group=GRP_SESSIONS)
+
+// London Session
+show_london = input.bool(true, "", inline="sess_london", group=GRP_SESSIONS)
+london_txt = input.string("London", "", inline="sess_london", group=GRP_SESSIONS)
+london_ses = input.session("0800-1600", "", inline="sess_london", tooltip="London session time range in HHMM-HHMM format", group=GRP_SESSIONS)
+london_css = input.color(color.new(color.blue, 0), "", inline="sess_london", group=GRP_SESSIONS)
+
+// New York Session
+show_ny = input.bool(true, "", inline="sess_ny", group=GRP_SESSIONS)
+ny_txt = input.string("New York", "", inline="sess_ny", group=GRP_SESSIONS)
+ny_ses = input.session("1300-2200", "", inline="sess_ny", tooltip="New York session time range in HHMM-HHMM format", group=GRP_SESSIONS)
+ny_css = input.color(color.new(color.green, 0), "", inline="sess_ny", group=GRP_SESSIONS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Display Options
+// ─────────────────────────────────────────────────────────────────────────────
+
+show_session_range = input.bool(true, "Session Ranges", inline="sess_opt01", tooltip="Show session high/low boxes", group=GRP_SESSIONS)
+show_session_highs = input.bool(true, "High/Low Lines", inline="sess_opt01", tooltip="Show horizontal lines at session highs and lows", group=GRP_SESSIONS)
+
+show_session_open = input.bool(false, "Open Markers", inline="sess_opt02", tooltip="Mark session open with vertical line", group=GRP_SESSIONS)
+show_session_close = input.bool(false, "Close Markers", inline="sess_opt02", tooltip="Mark session close with vertical line", group=GRP_SESSIONS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSIONS - Style Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+session_bg_transp = input.int(90, "Range Transparency", minval=0, maxval=100, tooltip="Session box background transparency", group=GRP_SESSION_STYLE)
+
+show_session_outline = input.bool(true, "Range Outline", tooltip="Show border on session range boxes", group=GRP_SESSION_STYLE)
+
+show_session_labels = input.bool(true, "Range Labels", tooltip="Show session name labels on boxes", group=GRP_SESSION_STYLE)
+
+session_line_width = input.int(1, "Line Width", minval=1, maxval=5, inline="sess_style01", tooltip="Session line thickness", group=GRP_SESSION_STYLE)
+
+session_line_style = input.string("Solid", "Line Style", options=["Solid", "Dashed", "Dotted"], inline="sess_style01", group=GRP_SESSION_STYLE)
+
+session_label_position = input.string("Right", "Label Position", options=["Right", "Left", "Above", "Below"], tooltip="Position of session high/low labels relative to the line", group=GRP_SESSION_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// KILL ZONES SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KILL ZONES - Display Toggles and Session Strings
+// ─────────────────────────────────────────────────────────────────────────────
+
+showKillZones = input.bool(true, "Show All Kill Zones", tooltip="Master toggle for all kill zone displays", group=GRP_KILLZONES)
+show_kz_text = input.bool(true, "Display Text Labels", tooltip="Show text labels on kill zones", group=GRP_KILLZONES)
+
+// Asian Kill Zone
+use_asian_kz = input.bool(true, "", inline="kz_asian", group=GRP_KILLZONES)
+asian_kz_txt = input.string("Asia", "", inline="kz_asian", group=GRP_KILLZONES)
+asian_kz_ses = input.session("2000-0000", "", inline="kz_asian", tooltip="Asian kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
+asian_kz_css = input.color(color.new(color.blue, 0), "", inline="kz_asian", group=GRP_KILLZONES)
+
+// London Kill Zone
+use_london_kz = input.bool(true, "", inline="kz_london", group=GRP_KILLZONES)
+london_kz_txt = input.string("London", "", inline="kz_london", group=GRP_KILLZONES)
+london_kz_ses = input.session("0200-0500", "", inline="kz_london", tooltip="London kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
+london_kz_css = input.color(color.new(color.red, 0), "", inline="kz_london", group=GRP_KILLZONES)
+
+// NY AM Kill Zone
+use_nyam_kz = input.bool(true, "", inline="kz_nyam", group=GRP_KILLZONES)
+nyam_kz_txt = input.string("NY AM", "", inline="kz_nyam", group=GRP_KILLZONES)
+nyam_kz_ses = input.session("0930-1100", "", inline="kz_nyam", tooltip="NY AM kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
+nyam_kz_css = input.color(color.new(color.teal, 0), "", inline="kz_nyam", group=GRP_KILLZONES)
+
+// NY Lunch Kill Zone
+use_nylu_kz = input.bool(true, "", inline="kz_nylu", group=GRP_KILLZONES)
+nylu_kz_txt = input.string("NY Lunch", "", inline="kz_nylu", group=GRP_KILLZONES)
+nylu_kz_ses = input.session("1200-1300", "", inline="kz_nylu", tooltip="NY Lunch kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
+nylu_kz_css = input.color(color.new(color.yellow, 0), "", inline="kz_nylu", group=GRP_KILLZONES)
+
+// NY PM Kill Zone
+use_nypm_kz = input.bool(true, "", inline="kz_nypm", group=GRP_KILLZONES)
+nypm_kz_txt = input.string("NY PM", "", inline="kz_nypm", group=GRP_KILLZONES)
+nypm_kz_ses = input.session("1330-1600", "", inline="kz_nypm", tooltip="NY PM kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
+nypm_kz_css = input.color(color.new(color.purple, 0), "", inline="kz_nypm", group=GRP_KILLZONES)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KILL ZONES - Style Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+kz_box_transp = input.int(70, "Box Transparency", minval=0, maxval=100, tooltip="Kill zone box transparency", group=GRP_KZ_STYLE)
+
+kz_text_transp = input.int(50, "Text Transparency", minval=0, maxval=100, tooltip="Kill zone label transparency", group=GRP_KZ_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Get line style constant
+get_line_style() =>
+    session_line_style == "Dashed" ? line.style_dashed : session_line_style == "Dotted" ? line.style_dotted : line.style_solid
+
+// Get label style constant based on user selection
+get_label_style() =>
+    session_label_position == "Left" ? label.style_label_right : session_label_position == "Above" ? label.style_label_down : session_label_position == "Below" ? label.style_label_up : label.style_label_left
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK TEXT CONSTRUCTION
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Build Line 1 (Title) - symbol, timeframe, and/or custom title
+var string line1Text = ""
+
+if showWatermark
+    line1Text := ""
+
+    if showSymbol
+        line1Text += syminfo.ticker
+
+    if showTimeframe
+        if showSymbol
+            line1Text += " | "
+        line1Text += timeframe.period
+
+    if titleText != ""
+        if showSymbol or showTimeframe
+            line1Text += " | "
+        line1Text += titleText
+
+// Build Line 2 (Subtitles) - up to 3 subtitle cells with pipe separators
+var string line2Text = ""
+
+if showWatermark
+    line2Text := ""
+
+    if subtitle1 != ""
+        line2Text += subtitle1
+
+    if subtitle2 != ""
+        if subtitle1 != ""
+            line2Text += " | "
+        line2Text += subtitle2
+
+    if subtitle3 != ""
+        if subtitle1 != "" or subtitle2 != ""
+            line2Text += " | "
+        line2Text += subtitle3
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK TABLE RENDERING
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Determine table position based on position setting
+var string tablePosition = position == "Left" ? position.top_left : position == "Right" ? position.top_right : position.top_center
+
+// Determine horizontal alignment
+var string hAlign = position == "Left" ? text.align_left : position == "Right" ? text.align_right : text.align_center
+
+// Create persistent table
+var table watermarkTable = table.new(position=tablePosition, columns=1, rows=2, bgcolor=color.new(color.black, 100), frame_width=0, border_width=0)
+
+// Apply transparency to text color
+watermarkTextColor = color.new(textColor, transparency)
+
+// Update on last bar for optimal performance
+if barstate.islast
+    if showWatermark
+        if line1Text != ""
+            table.cell(watermarkTable, column=0, row=0, text=line1Text, text_color=watermarkTextColor, text_size=fontSize, text_halign=hAlign, bgcolor=color.new(color.black, 100))
+        else
+            table.cell(watermarkTable, column=0, row=0, text="", bgcolor=color.new(color.black, 100))
+
+        if line2Text != ""
+            table.cell(watermarkTable, column=0, row=1, text=line2Text, text_color=watermarkTextColor, text_size=fontSize, text_halign=hAlign, bgcolor=color.new(color.black, 100))
+        else
+            table.cell(watermarkTable, column=0, row=1, text="", bgcolor=color.new(color.black, 100))
+    else
+        table.cell(watermarkTable, column=0, row=0, text="", bgcolor=color.new(color.black, 100))
+        table.cell(watermarkTable, column=0, row=1, text="", bgcolor=color.new(color.black, 100))
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSION DETECTION (INSPIRATION APPROACH)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Use Pine's native time() function for robust session detection
+tf = timeframe.period
+
+is_asian = (showSessions and show_asian) ? math.sign(nz(time(tf, asian_ses, gmt_tz))) : 0.0
+is_london = (showSessions and show_london) ? math.sign(nz(time(tf, london_ses, gmt_tz))) : 0.0
+is_ny = (showSessions and show_ny) ? math.sign(nz(time(tf, ny_ses, gmt_tz))) : 0.0
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSION RANGE BOXES (INSPIRATION-STYLE WITH ARRAYS)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Session range tracking function (inspired by LuxAlgo)
+get_session_range(session, session_name, session_css) =>
+    var int t = 0
+    var float max = high
+    var float min = low
+    var box bx = na
+    var label lbl = na
+    var array<box> box_array = array.new<box>()
+    var array<label> label_array = array.new<label>()
+
+    if session > session[1]
+        t := time
+        max := high
+        min := low
+
+        bx := box.new(bar_index, max, bar_index, min, bgcolor=color.new(session_css, session_bg_transp), border_color=show_session_outline ? session_css : na, border_style=line.style_dotted)
+
+        box_array.unshift(bx)
+
+        if show_session_labels
+            lbl := label.new(time, max, session_name, xloc=xloc.bar_time, textcolor=session_css, style=label.style_label_down, color=color.new(color.white, 100), size=size.tiny)
+            label_array.unshift(lbl)
+
+        // Drawing limit management
+        if box_array.size() > max_days
+            old_box = box_array.pop()
+            box.delete(old_box)
+
+        if label_array.size() > max_days
+            old_label = label_array.pop()
+            label.delete(old_label)
+
+    if session > 0 and session == session[1]
+        max := math.max(high, max)
+        min := math.min(low, min)
+
+        if not na(bx)
+            box.set_top(bx, max)
+            box.set_rightbottom(bx, bar_index, min)
+
+        if show_session_labels and not na(lbl)
+            label.set_xy(lbl, int(math.avg(t, time)), max)
+
+    [session > 0 ? na : max, session > 0 ? na : min]
+
+// Apply session ranges
+if show_session_range
+    [asian_max, asian_min] = get_session_range(is_asian, asian_txt, asian_css)
+    [london_max, london_min] = get_session_range(is_london, london_txt, london_css)
+    [ny_max, ny_min] = get_session_range(is_ny, ny_txt, ny_css)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSION HIGH/LOW LINES (INSPIRATION APPROACH)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Track session highs/lows with arrays for multi-day support
+var array<line> asian_hi_lines = array.new<line>()
+var array<line> asian_lo_lines = array.new<line>()
+var array<label> asian_hi_labels = array.new<label>()
+var array<label> asian_lo_labels = array.new<label>()
+
+var array<line> london_hi_lines = array.new<line>()
+var array<line> london_lo_lines = array.new<line>()
+var array<label> london_hi_labels = array.new<label>()
+var array<label> london_lo_labels = array.new<label>()
+
+var array<line> ny_hi_lines = array.new<line>()
+var array<line> ny_lo_lines = array.new<line>()
+var array<label> ny_hi_labels = array.new<label>()
+var array<label> ny_lo_labels = array.new<label>()
+
+// Session high/low tracking function
+track_session_hl(session, hi_lines, lo_lines, hi_labels, lo_labels, sess_name, sess_color) =>
+    var float sess_high = na
+    var float sess_low = na
+    var int sess_start = na
+    var line hi_ln = na
+    var line lo_ln = na
+    var label hi_lb = na
+    var label lo_lb = na
+
+    if session > session[1]
+        sess_high := high
+        sess_low := low
+        sess_start := bar_index
+
+        if show_session_highs
+            hi_ln := line.new(sess_start, sess_high, bar_index, sess_high, color=sess_color, width=session_line_width, style=get_line_style())
+            lo_ln := line.new(sess_start, sess_low, bar_index, sess_low, color=sess_color, width=session_line_width, style=get_line_style())
+
+            hi_lines.unshift(hi_ln)
+            lo_lines.unshift(lo_ln)
+
+            hi_lb := label.new(bar_index, sess_high, sess_name + " H", color=color.new(color.black, 100), textcolor=sess_color, size=size.small, style=get_label_style())
+            lo_lb := label.new(bar_index, sess_low, sess_name + " L", color=color.new(color.black, 100), textcolor=sess_color, size=size.small, style=get_label_style())
+
+            hi_labels.unshift(hi_lb)
+            lo_labels.unshift(lo_lb)
+
+            // Drawing limit management
+            if hi_lines.size() > max_days
+                old_hi = hi_lines.pop()
+                old_lo = lo_lines.pop()
+                line.delete(old_hi)
+                line.delete(old_lo)
+
+            if hi_labels.size() > max_days
+                old_hi_lb = hi_labels.pop()
+                old_lo_lb = lo_labels.pop()
+                label.delete(old_hi_lb)
+                label.delete(old_lo_lb)
+
+    if session > 0 and session == session[1]
+        if high > sess_high
+            sess_high := high
+            if show_session_highs and not na(hi_ln)
+                line.set_y1(hi_ln, sess_high)
+                line.set_y2(hi_ln, sess_high)
+                if not na(hi_lb)
+                    label.set_y(hi_lb, sess_high)
+
+        if low < sess_low
+            sess_low := low
+            if show_session_highs and not na(lo_ln)
+                line.set_y1(lo_ln, sess_low)
+                line.set_y2(lo_ln, sess_low)
+                if not na(lo_lb)
+                    label.set_y(lo_lb, sess_low)
+
+        if show_session_highs and not na(hi_ln)
+            line.set_x2(hi_ln, bar_index)
+            line.set_x2(lo_ln, bar_index)
+            if not na(hi_lb)
+                label.set_x(hi_lb, bar_index)
+                label.set_x(lo_lb, bar_index)
+
+// Apply session high/low tracking
+track_session_hl(is_asian, asian_hi_lines, asian_lo_lines, asian_hi_labels, asian_lo_labels, asian_txt, asian_css)
+track_session_hl(is_london, london_hi_lines, london_lo_lines, london_hi_labels, london_lo_labels, london_txt, london_css)
+track_session_hl(is_ny, ny_hi_lines, ny_lo_lines, ny_hi_labels, ny_lo_labels, ny_txt, ny_css)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SESSION OPEN/CLOSE MARKERS
+// ══════════════════════════════════════════════════════════════════════════════
+
+if show_session_open
+    if is_asian > 0 and is_asian[1] == 0
+        line.new(bar_index, low, bar_index, high, color=asian_css, width=1, style=line.style_dotted)
+    if is_london > 0 and is_london[1] == 0
+        line.new(bar_index, low, bar_index, high, color=london_css, width=1, style=line.style_dotted)
+    if is_ny > 0 and is_ny[1] == 0
+        line.new(bar_index, low, bar_index, high, color=ny_css, width=1, style=line.style_dotted)
+
+if show_session_close
+    if is_asian == 0 and is_asian[1] > 0
+        line.new(bar_index, low, bar_index, high, color=asian_css, width=1, style=line.style_dotted)
+    if is_london == 0 and is_london[1] > 0
+        line.new(bar_index, low, bar_index, high, color=london_css, width=1, style=line.style_dotted)
+    if is_ny == 0 and is_ny[1] > 0
+        line.new(bar_index, low, bar_index, high, color=ny_css, width=1, style=line.style_dotted)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// KILL ZONE DETECTION (INSPIRATION APPROACH)
+// ══════════════════════════════════════════════════════════════════════════════
+
+is_asian_kz = (showKillZones and use_asian_kz) ? math.sign(nz(time(tf, asian_kz_ses, gmt_tz))) : 0.0
+is_london_kz = (showKillZones and use_london_kz) ? math.sign(nz(time(tf, london_kz_ses, gmt_tz))) : 0.0
+is_nyam_kz = (showKillZones and use_nyam_kz) ? math.sign(nz(time(tf, nyam_kz_ses, gmt_tz))) : 0.0
+is_nylu_kz = (showKillZones and use_nylu_kz) ? math.sign(nz(time(tf, nylu_kz_ses, gmt_tz))) : 0.0
+is_nypm_kz = (showKillZones and use_nypm_kz) ? math.sign(nz(time(tf, nypm_kz_ses, gmt_tz))) : 0.0
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// KILL ZONE BOXES (ARRAY-BASED WITH DRAWING LIMITS)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Kill zone tracking function with array management
+track_killzone(kz_session, kz_txt, kz_color) =>
+    var int kz_start = na
+    var float kz_high = na
+    var float kz_low = na
+    var box kz_box = na
+    var label kz_label = na
+    var array<box> kz_boxes = array.new<box>()
+    var array<label> kz_labels = array.new<label>()
+
+    if kz_session > kz_session[1]
+        kz_start := bar_index
+        kz_high := high
+        kz_low := low
+
+        box_color = color.new(kz_color, kz_box_transp)
+        kz_box := box.new(kz_start, kz_high, bar_index, kz_low, bgcolor=box_color, border_color=box_color, border_width=1)
+        kz_boxes.unshift(kz_box)
+
+        if show_kz_text and kz_txt != ""
+            text_color = color.new(color.white, kz_text_transp)
+            kz_label := label.new(bar_index, kz_high, kz_txt, color=box_color, textcolor=text_color, size=size.small, style=label.style_label_down)
+            kz_labels.unshift(kz_label)
+
+        // Drawing limit management
+        if kz_boxes.size() > max_days
+            old_box = kz_boxes.pop()
+            box.delete(old_box)
+
+        if kz_labels.size() > max_days
+            old_label = kz_labels.pop()
+            label.delete(old_label)
+
+    if kz_session > 0 and kz_session == kz_session[1]
+        if high > kz_high
+            kz_high := high
+        if low < kz_low
+            kz_low := low
+
+        if not na(kz_box)
+            box.set_top(kz_box, kz_high)
+            box.set_bottom(kz_box, kz_low)
+            box.set_right(kz_box, bar_index)
+
+        if show_kz_text and not na(kz_label)
+            label.set_xy(kz_label, bar_index, kz_high)
+
+// Apply kill zone tracking
+track_killzone(is_asian_kz, asian_kz_txt, asian_kz_css)
+track_killzone(is_london_kz, london_kz_txt, london_kz_css)
+track_killzone(is_nyam_kz, nyam_kz_txt, nyam_kz_css)
+track_killzone(is_nylu_kz, nylu_kz_txt, nylu_kz_css)
+track_killzone(is_nypm_kz, nypm_kz_txt, nypm_kz_css)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// END OF OBSIDIAN v2.5.0 - HYBRID IMPLEMENTATION
+// ══════════════════════════════════════════════════════════════════════════════

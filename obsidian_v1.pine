@@ -6,9 +6,9 @@ indicator("Obsidian", shorttitle="OBS", overlay=true)
 // Phase 1 + 2: Watermark Foundation + Sessions & Kill Zones
 //
 // Purpose: ICT-focused trading indicator with sessions, kill zones, and watermark
-// Version: 2.2.1 (Real-Time Session High/Low Lines + Session Box Fixes)
+// Version: 2.3.0 (Removed Trading Days Display Limit)
 // Author: Generated via Claude Code
-// Date: 2025-11-24
+// Date: 2025-11-28
 //
 // Phase 1 Features (Completed):
 // - Customizable watermark overlay with dual-line display
@@ -101,7 +101,6 @@ var string GRP_SESSION_TIMES = "Session Times"
 var string GRP_SESSION_STYLE = "Session Style"
 var string GRP_KILLZONES = "═══ KILL ZONES ═══"
 var string GRP_KZ_STYLE = "Kill Zone Style"
-var string GRP_DISPLAY_CONTROL = "═══ DISPLAY CONTROL ═══"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TIMEZONE CONFIGURATION
@@ -118,19 +117,6 @@ timezoneOffset = getTimezoneOffset()
 
 // Informational tooltip to explain timezone system
 timezoneInfo = input.string("ℹ️ Timezone Settings", "Session Times Reference", tooltip="⏰ SESSION TIMES IN YOUR SELECTED TIMEZONE\n\nSelect your timezone above (GMT+0 or GMT-5)\n\n📍 Default Times:\n• Asian: 00:00-09:00\n• London: 08:00-16:00\n• NY: 13:00-22:00\n\nNote: All times are displayed in your selected timezone.\nTimes will automatically adjust based on your timezone selection.\n\n💡 Time Format: HH:MM (24-hour format)\nExamples: 09:30, 13:00, 17:45", group=GRP_TIMEZONES)
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DISPLAY CONTROL - Trading Days to Display (Phase 2.1)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Input for number of days
-daysToShow = input.int(3, "Trading Days to Display", minval=1, maxval=30, tooltip="Number of trading days (excluding weekends) to show sessions and killzones.\nExample: 3 = today + 2 prior trading days", group=GRP_DISPLAY_CONTROL)
-
-// Optional: Quick presets dropdown
-displayPreset = input.string("Custom", "Display Preset", options=["Current Day Only", "3-Day View", "Week View", "Custom"], tooltip="Quick preset for display period", group=GRP_DISPLAY_CONTROL, inline="preset01")
-
-// Derive effective days from preset or custom input
-effectiveDays = displayPreset == "Current Day Only" ? 1 : displayPreset == "3-Day View" ? 3 : displayPreset == "Week View" ? 7 : daysToShow
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SESSIONS - Display Toggles
@@ -444,52 +430,7 @@ isSessionEndTime(endTimeStr) =>
     prevMinutes = getCurrentTimeMinutes() - timeframe.multiplier
     endMinutes = timeToMinutes(endTimeStr)
 
-    currentMinutes > endMinutes and prevMinutes <= endMinutes
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TRADING DAY DETECTION (Weekend Exclusion for Forex) - Phase 2.1
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Check if a given time is a weekend (Saturday or Sunday)
-isWeekend(t) =>
-    dayOfWeek = dayofweek(t)
-    dayOfWeek == dayofweek.saturday or dayOfWeek == dayofweek.sunday
-
-// Get current trading day timestamp (midnight of current trading day)
-getCurrentTradingDay() =>
-    timestamp(year(time), month(time), dayofmonth(time), 0, 0, 0)
-
-// Count back N trading days from current day
-getTradingDayNDaysAgo(n) =>
-    var int daysBack = 0
-    var int tradingDaysFound = 0
-    var int resultTimestamp = time
-
-    if n == 0
-        getCurrentTradingDay()
-    else
-        daysBack := 0
-        tradingDaysFound := 0
-
-        // Loop back through calendar days until we find N trading days
-        for i = 1 to 100  // Safety limit (100 calendar days should cover 30 trading days)
-            testTime = time - (i * 86400000)  // i days ago in milliseconds
-
-            if not isWeekend(testTime)
-                tradingDaysFound += 1
-
-                if tradingDaysFound == n
-                    resultTimestamp := timestamp(year(testTime), month(testTime), dayofmonth(testTime), 0, 0, 0)
-                    break
-
-        resultTimestamp
-
-// Get cutoff timestamp for historical display
-historicalCutoffTime = getTradingDayNDaysAgo(effectiveDays - 1)
-
-// Check if current bar is within display window
-isWithinDisplayWindow() =>
-    time >= historicalCutoffTime
+    currentMinutes >= endMinutes and prevMinutes < endMinutes
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SESSION STATE TRACKING
@@ -559,9 +500,9 @@ var label londonSessionLiveLowLabel = na
 var label nySessionLiveHighLabel = na
 var label nySessionLiveLowLabel = na
 
-// Detect if we're on current trading day
+// Detect if we're on current day
 isCurrentTradingDay() =>
-    not isWeekend(time) and dayofmonth(time) == dayofmonth(timenow)
+    dayofmonth(time) == dayofmonth(timenow) and month(time) == month(timenow) and year(time) == year(timenow)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LINE STYLE HELPER (must be defined before session tracking blocks)
@@ -588,12 +529,12 @@ if showSessions and showAsianSession
         asianSessionIsToday := isCurrentTradingDay()
 
         // Create background box immediately if enabled and on current day
-        if showSessionBg and asianSessionIsToday and isWithinDisplayWindow()
+        if showSessionBg and asianSessionIsToday
             bgColor = color.new(asianColor, sessionBgTransparency)
             asianSessionLiveBox := box.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
 
         // Create live high/low lines immediately if enabled and on current day
-        if asianSessionIsToday and isWithinDisplayWindow()
+        if asianSessionIsToday
             if showSessionHighs
                 asianSessionLiveHighLine := line.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionHigh, color=asianColor, width=sessionLineWidth, style=lineStyle)
                 if asianLabel != ""
@@ -640,8 +581,11 @@ if showSessions and showAsianSession
                         label.set_xy(asianSessionLiveLowLabel, bar_index, asianSessionLow)
 
     else if isSessionEndTime(asianEndTime)
-        // Session ended - create static box for historical sessions
-        if showSessionBg and not asianSessionIsToday and isWithinDisplayWindow() and not na(asianSessionStartBar)
+        // Session ended - create static box for completed sessions
+        if showSessionBg and not na(asianSessionStartBar) and not na(asianSessionLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(asianSessionLiveBox)
+        if showSessionBg and not na(asianSessionStartBar)
             bgColor = color.new(asianColor, sessionBgTransparency)
             box.new(asianSessionStartBar, asianSessionHigh, bar_index, asianSessionLow, bgcolor=bgColor, border_color=na)
 
@@ -661,12 +605,12 @@ if showSessions and showLondonSession
         londonSessionStartBar := bar_index
         londonSessionIsToday := isCurrentTradingDay()
 
-        if showSessionBg and londonSessionIsToday and isWithinDisplayWindow()
+        if showSessionBg and londonSessionIsToday
             bgColor = color.new(londonColor, sessionBgTransparency)
             londonSessionLiveBox := box.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
 
         // Create live high/low lines immediately if enabled and on current day
-        if londonSessionIsToday and isWithinDisplayWindow()
+        if londonSessionIsToday
             if showSessionHighs
                 londonSessionLiveHighLine := line.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionHigh, color=londonColor, width=sessionLineWidth, style=lineStyle)
                 if londonLabel != ""
@@ -712,8 +656,11 @@ if showSessions and showLondonSession
                         label.set_xy(londonSessionLiveLowLabel, bar_index, londonSessionLow)
 
     else if isSessionEndTime(londonEndTime)
-        // Session ended - create static box for historical sessions
-        if showSessionBg and not londonSessionIsToday and isWithinDisplayWindow() and not na(londonSessionStartBar)
+        // Session ended - create static box for completed sessions
+        if showSessionBg and not na(londonSessionStartBar) and not na(londonSessionLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(londonSessionLiveBox)
+        if showSessionBg and not na(londonSessionStartBar)
             bgColor = color.new(londonColor, sessionBgTransparency)
             box.new(londonSessionStartBar, londonSessionHigh, bar_index, londonSessionLow, bgcolor=bgColor, border_color=na)
 
@@ -733,12 +680,12 @@ if showSessions and showNYSession
         nySessionStartBar := bar_index
         nySessionIsToday := isCurrentTradingDay()
 
-        if showSessionBg and nySessionIsToday and isWithinDisplayWindow()
+        if showSessionBg and nySessionIsToday
             bgColor = color.new(nyColor, sessionBgTransparency)
             nySessionLiveBox := box.new(nySessionStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
 
         // Create live high/low lines immediately if enabled and on current day
-        if nySessionIsToday and isWithinDisplayWindow()
+        if nySessionIsToday
             if showSessionHighs
                 nySessionLiveHighLine := line.new(nySessionStartBar, nySessionHigh, bar_index, nySessionHigh, color=nyColor, width=sessionLineWidth, style=lineStyle)
                 if nyLabel != ""
@@ -784,8 +731,11 @@ if showSessions and showNYSession
                         label.set_xy(nySessionLiveLowLabel, bar_index, nySessionLow)
 
     else if isSessionEndTime(nyEndTime)
-        // Session ended - create static box for historical sessions
-        if showSessionBg and not nySessionIsToday and isWithinDisplayWindow() and not na(nySessionStartBar)
+        // Session ended - create static box for completed sessions
+        if showSessionBg and not na(nySessionStartBar) and not na(nySessionLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(nySessionLiveBox)
+        if showSessionBg and not na(nySessionStartBar)
             bgColor = color.new(nyColor, sessionBgTransparency)
             box.new(nySessionStartBar, nySessionHigh, bar_index, nySessionLow, bgcolor=bgColor, border_color=na)
 
@@ -801,7 +751,7 @@ if showSessions and showNYSession
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Draw session high/low lines at session end
-if showSessions and isWithinDisplayWindow()
+if showSessions
     // Asian Session Lines
     if showAsianSession and isSessionEndTime(asianEndTime)
         if showSessionHighs and not na(asianSessionHigh)
@@ -839,7 +789,7 @@ if showSessions and isWithinDisplayWindow()
                 label.new(bar_index, nySessionLow, nyLabel + " L", color=color.new(color.black, 100), textcolor=nyColor, size=size.small, style=label.style_label_left)
 
 // Draw session open/close markers (vertical lines)
-if showSessions and isWithinDisplayWindow()
+if showSessions
     if showSessionOpen
         if showAsianSession and isSessionStartTime(asianStartTime)
             line.new(bar_index, low, bar_index, high, color=asianColor, width=1, style=line.style_dotted)
@@ -897,7 +847,7 @@ if showKillZones and showAsianKZ
         asianKZIsToday := isCurrentTradingDay()
 
         // Create box immediately if on current day
-        if asianKZIsToday and isWithinDisplayWindow()
+        if asianKZIsToday
             kzColor = color.new(asianKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             asianKZLiveBox := box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -928,9 +878,11 @@ if showKillZones and showAsianKZ
                 box.set_bottom(asianKZLiveBox, asianKZLow)
 
     else if isSessionEndTime(asianKZEndTime)
-        // Session ended
-        if not asianKZIsToday and isWithinDisplayWindow() and not na(asianKZStartBar)
-            // Historical session - draw static box
+        // Session ended - create static box
+        if not na(asianKZStartBar) and not na(asianKZLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(asianKZLiveBox)
+        if not na(asianKZStartBar)
             kzColor = color.new(asianKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             box.new(asianKZStartBar, asianKZHigh, bar_index, asianKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -950,7 +902,7 @@ if showKillZones and showLondonKZ
         londonKZIsToday := isCurrentTradingDay()
 
         // Create box immediately if on current day
-        if londonKZIsToday and isWithinDisplayWindow()
+        if londonKZIsToday
             kzColor = color.new(londonKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             londonKZLiveBox := box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -975,7 +927,11 @@ if showKillZones and showLondonKZ
                 box.set_bottom(londonKZLiveBox, londonKZLow)
 
     else if isSessionEndTime(londonKZEndTime)
-        if not londonKZIsToday and isWithinDisplayWindow() and not na(londonKZStartBar)
+        // Session ended - create static box
+        if not na(londonKZStartBar) and not na(londonKZLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(londonKZLiveBox)
+        if not na(londonKZStartBar)
             kzColor = color.new(londonKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             box.new(londonKZStartBar, londonKZHigh, bar_index, londonKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -993,7 +949,7 @@ if showKillZones and showNYAMKZ
         nyAMKZLow := low
         nyAMKZIsToday := isCurrentTradingDay()
 
-        if nyAMKZIsToday and isWithinDisplayWindow()
+        if nyAMKZIsToday
             kzColor = color.new(nyAMKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             nyAMKZLiveBox := box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -1018,7 +974,11 @@ if showKillZones and showNYAMKZ
                 box.set_bottom(nyAMKZLiveBox, nyAMKZLow)
 
     else if isSessionEndTime(nyAMKZEndTime)
-        if not nyAMKZIsToday and isWithinDisplayWindow() and not na(nyAMKZStartBar)
+        // Session ended - create static box
+        if not na(nyAMKZStartBar) and not na(nyAMKZLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(nyAMKZLiveBox)
+        if not na(nyAMKZStartBar)
             kzColor = color.new(nyAMKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             box.new(nyAMKZStartBar, nyAMKZHigh, bar_index, nyAMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -1036,7 +996,7 @@ if showKillZones and showNYLunchKZ
         nyLunchKZLow := low
         nyLunchKZIsToday := isCurrentTradingDay()
 
-        if nyLunchKZIsToday and isWithinDisplayWindow()
+        if nyLunchKZIsToday
             kzColor = color.new(nyLunchKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             nyLunchKZLiveBox := box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -1061,7 +1021,11 @@ if showKillZones and showNYLunchKZ
                 box.set_bottom(nyLunchKZLiveBox, nyLunchKZLow)
 
     else if isSessionEndTime(nyLunchKZEndTime)
-        if not nyLunchKZIsToday and isWithinDisplayWindow() and not na(nyLunchKZStartBar)
+        // Session ended - create static box
+        if not na(nyLunchKZStartBar) and not na(nyLunchKZLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(nyLunchKZLiveBox)
+        if not na(nyLunchKZStartBar)
             kzColor = color.new(nyLunchKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             box.new(nyLunchKZStartBar, nyLunchKZHigh, bar_index, nyLunchKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -1079,7 +1043,7 @@ if showKillZones and showNYPMKZ
         nyPMKZLow := low
         nyPMKZIsToday := isCurrentTradingDay()
 
-        if nyPMKZIsToday and isWithinDisplayWindow()
+        if nyPMKZIsToday
             kzColor = color.new(nyPMKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             nyPMKZLiveBox := box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
@@ -1104,7 +1068,11 @@ if showKillZones and showNYPMKZ
                 box.set_bottom(nyPMKZLiveBox, nyPMKZLow)
 
     else if isSessionEndTime(nyPMKZEndTime)
-        if not nyPMKZIsToday and isWithinDisplayWindow() and not na(nyPMKZStartBar)
+        // Session ended - create static box
+        if not na(nyPMKZStartBar) and not na(nyPMKZLiveBox)
+            // Delete the live box first to avoid duplicates
+            box.delete(nyPMKZLiveBox)
+        if not na(nyPMKZStartBar)
             kzColor = color.new(nyPMKZColor, kzTransparency)
             borderColor = showKZBorder ? color.new(kzBorderColor, kzTransparency) : na
             box.new(nyPMKZStartBar, nyPMKZHigh, bar_index, nyPMKZLow, bgcolor=kzColor, border_color=borderColor, border_width=kzBorderWidth)
