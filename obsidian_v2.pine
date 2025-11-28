@@ -3,20 +3,32 @@ indicator("Obsidian", shorttitle="OBS", overlay=true, max_lines_count=500, max_b
 
 // ══════════════════════════════════════════════════════════════════════════════
 // OBSIDIAN - TradingView All-in-One Indicator
-// Phase 2.5: Hybrid Architecture (Inspiration + Custom UI)
+// Phase 3.1: Previous Period Highs & Lows with Customizable Labels
 //
-// Purpose: ICT-focused trading indicator with sessions, kill zones, and watermark
-// Version: 2.5.0 (Hybrid Implementation - Robust Session Detection)
+// Purpose: ICT-focused trading indicator with sessions, kill zones, and period levels
+// Version: 3.1.1 (Fixed Lookback Count Bug)
 // Author: Generated via Claude Code
 // Date: 2025-11-28
 //
-// Major Changes in v2.5.0:
-// - Replaced manual time detection with Pine's native time() function
-// - Universal timezone support (GMT-12 to GMT+14)
-// - Session input format changed to "HHMM-HHMM" (e.g., "0000-0900")
-// - Array-based kill zone tracking for multi-day support
-// - Drawing limit management system (max_days parameter)
-// - Improved performance and reliability
+// Bug Fix in v3.1.1:
+// - Fixed off-by-one error in array size management (lookback + 1 → lookback)
+// - Now correctly displays N periods when lookback is set to N (was showing N+1)
+//
+// Major Changes in v3.1.0:
+// - Added customizable label text for period H/L (PDH, PDL, PWH, PWL, PMH, PML)
+// - Added label position control (Left/Right)
+// - Labels now support gradient effect alongside lines
+// - Independent label array management with drawing limits
+// - Labels update dynamically with current bar position
+//
+// Major Changes in v3.0.0:
+// - Added Daily/Weekly/Monthly High/Low lines
+// - User-selectable line styles (Solid, Dashed, Dotted) for each period
+// - Customizable line widths (1-5) per period
+// - Lookback controls (show last N periods)
+// - Optional gradient effect for recency visualization
+// - Array-based period tracking with drawing limits
+// - Automatic timeframe detection for appropriate display
 //
 // Phase 1 Features (Completed):
 // - Customizable watermark overlay with dual-line display
@@ -38,8 +50,18 @@ indicator("Obsidian", shorttitle="OBS", overlay=true, max_lines_count=500, max_b
 // - Multi-day kill zone history tracking
 // - Drawing limit management
 //
+// Phase 3 Features (Completed):
+// - Daily/Weekly/Monthly previous period high/low lines
+// - Customizable line styles per period (Solid/Dashed/Dotted)
+// - Independent line width control (1-5)
+// - Lookback period controls (last N periods)
+// - Optional gradient effect for older periods
+// - Automatic timeframe-based display
+// - Customizable label text per period (v3.1.0)
+// - Label position control and gradient support (v3.1.0)
+//
 // Future Roadmap:
-// - Phase 3: Market structure, liquidity zones, FVGs, order blocks
+// - Phase 3B: Market structure, liquidity zones, FVGs, order blocks
 // - Phase 4: Alerts, widgets, presets
 // - Phase 5: Full trading suite & themes
 // ══════════════════════════════════════════════════════════════════════════════
@@ -58,6 +80,8 @@ var string GRP_SESSIONS = "═══ SESSIONS ═══"
 var string GRP_SESSION_STYLE = "Session Style"
 var string GRP_KILLZONES = "═══ KILL ZONES ═══"
 var string GRP_KZ_STYLE = "Kill Zone Style"
+var string GRP_PREV_PERIODS = "═══ PREVIOUS PERIOD H/L ═══"
+var string GRP_PREV_STYLE = "Previous Period Style"
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -220,6 +244,61 @@ kz_text_transp = input.int(50, "Text Transparency", minval=0, maxval=100, toolti
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PREVIOUS PERIOD H/L SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIOUS PERIODS - Display Toggles and Lookback Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+show_prev_periods = input.bool(true, "Show Previous Period H/L", tooltip="Master toggle for daily/weekly/monthly high/low lines", group=GRP_PREV_PERIODS)
+
+show_daily_hl = input.bool(true, "Daily H/L", inline="period01", tooltip="Previous daily high/low", group=GRP_PREV_PERIODS)
+daily_lookback = input.int(2, "Lookback", inline="period01", minval=1, maxval=10, tooltip="Number of previous days to display", group=GRP_PREV_PERIODS)
+
+show_weekly_hl = input.bool(true, "Weekly H/L", inline="period02", tooltip="Previous weekly high/low", group=GRP_PREV_PERIODS)
+weekly_lookback = input.int(1, "Lookback", inline="period02", minval=1, maxval=5, tooltip="Number of previous weeks to display", group=GRP_PREV_PERIODS)
+
+show_monthly_hl = input.bool(false, "Monthly H/L", inline="period03", tooltip="Previous monthly high/low", group=GRP_PREV_PERIODS)
+monthly_lookback = input.int(1, "Lookback", inline="period03", minval=1, maxval=3, tooltip="Number of previous months to display", group=GRP_PREV_PERIODS)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIOUS PERIODS - Style Settings (Customizable Line Styles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+daily_color = input.color(color.new(color.green, 0), "Daily Color", inline="color01", group=GRP_PREV_STYLE)
+weekly_color = input.color(color.new(color.orange, 0), "Weekly Color", inline="color01", group=GRP_PREV_STYLE)
+monthly_color = input.color(color.new(color.red, 0), "Monthly Color", inline="color01", group=GRP_PREV_STYLE)
+
+daily_line_style = input.string("Dashed", "Daily Line Style", options=["Solid", "Dashed", "Dotted"], inline="style01", tooltip="Choose line style for daily high/low", group=GRP_PREV_STYLE)
+weekly_line_style = input.string("Solid", "Weekly Line Style", options=["Solid", "Dashed", "Dotted"], inline="style01", tooltip="Choose line style for weekly high/low", group=GRP_PREV_STYLE)
+monthly_line_style = input.string("Solid", "Monthly Line Style", options=["Solid", "Dashed", "Dotted"], inline="style02", tooltip="Choose line style for monthly high/low", group=GRP_PREV_STYLE)
+
+daily_line_width = input.int(1, "Daily Width", minval=1, maxval=5, inline="width01", group=GRP_PREV_STYLE)
+weekly_line_width = input.int(2, "Weekly Width", minval=1, maxval=5, inline="width01", group=GRP_PREV_STYLE)
+monthly_line_width = input.int(3, "Monthly Width", minval=1, maxval=5, inline="width01", group=GRP_PREV_STYLE)
+
+show_gradient = input.bool(false, "Show Gradient Effect", tooltip="Fade older lines for recency visualization", group=GRP_PREV_STYLE)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIOUS PERIODS - Label Customization
+// ─────────────────────────────────────────────────────────────────────────────
+
+show_period_labels = input.bool(true, "Show Period Labels", tooltip="Display text labels for previous period high/low lines", group=GRP_PREV_STYLE)
+
+daily_high_label = input.string("PDH", "Daily High", inline="label01", tooltip="Label text for previous daily high", group=GRP_PREV_STYLE)
+daily_low_label = input.string("PDL", "Daily Low", inline="label01", tooltip="Label text for previous daily low", group=GRP_PREV_STYLE)
+
+weekly_high_label = input.string("PWH", "Weekly High", inline="label02", tooltip="Label text for previous weekly high", group=GRP_PREV_STYLE)
+weekly_low_label = input.string("PWL", "Weekly Low", inline="label02", tooltip="Label text for previous weekly low", group=GRP_PREV_STYLE)
+
+monthly_high_label = input.string("PMH", "Monthly High", inline="label03", tooltip="Label text for previous monthly high", group=GRP_PREV_STYLE)
+monthly_low_label = input.string("PML", "Monthly Low", inline="label03", tooltip="Label text for previous monthly low", group=GRP_PREV_STYLE)
+
+period_label_position = input.string("Right", "Label Position", options=["Right", "Left"], tooltip="Position of period labels relative to the line", group=GRP_PREV_STYLE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -230,6 +309,20 @@ get_line_style() =>
 // Get label style constant based on user selection
 get_label_style() =>
     session_label_position == "Left" ? label.style_label_right : session_label_position == "Above" ? label.style_label_down : session_label_position == "Below" ? label.style_label_up : label.style_label_left
+
+// Get period line style constants
+get_daily_line_style() =>
+    daily_line_style == "Dashed" ? line.style_dashed : daily_line_style == "Dotted" ? line.style_dotted : line.style_solid
+
+get_weekly_line_style() =>
+    weekly_line_style == "Dashed" ? line.style_dashed : weekly_line_style == "Dotted" ? line.style_dotted : line.style_solid
+
+get_monthly_line_style() =>
+    monthly_line_style == "Dashed" ? line.style_dashed : monthly_line_style == "Dotted" ? line.style_dotted : line.style_solid
+
+// Get period label style constant based on user selection
+get_period_label_style() =>
+    period_label_position == "Left" ? label.style_label_right : label.style_label_left
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -318,6 +411,21 @@ tf = timeframe.period
 is_asian = (showSessions and show_asian) ? math.sign(nz(time(tf, asian_ses, gmt_tz))) : 0.0
 is_london = (showSessions and show_london) ? math.sign(nz(time(tf, london_ses, gmt_tz))) : 0.0
 is_ny = (showSessions and show_ny) ? math.sign(nz(time(tf, ny_ses, gmt_tz))) : 0.0
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PREVIOUS PERIOD H/L DATA RETRIEVAL
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Request higher timeframe data for daily, weekly, and monthly periods
+[daily_time, daily_high, daily_low, is_last_daily] = request.security(syminfo.tickerid, 'D', [time, high, low, barstate.islast], lookahead=barmerge.lookahead_on)
+[weekly_time, weekly_high, weekly_low, is_last_weekly] = request.security(syminfo.tickerid, 'W', [time, high, low, barstate.islast], lookahead=barmerge.lookahead_on)
+[monthly_time, monthly_high, monthly_low, is_last_monthly] = request.security(syminfo.tickerid, 'M', [time, high, low, barstate.islast], lookahead=barmerge.lookahead_on)
+
+// Detect period changes
+has_daily_changed = daily_time != daily_time[1]
+has_weekly_changed = weekly_time != weekly_time[1]
+has_monthly_changed = monthly_time != monthly_time[1]
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -468,6 +576,68 @@ track_session_hl(is_ny, ny_hi_lines, ny_lo_lines, ny_hi_labels, ny_lo_labels, ny
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// PREVIOUS PERIOD H/L DRAWING FUNCTION
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Track and draw period high/low lines with array management and labels
+track_period_hl(is_new_period, period_high, period_low, is_last, lookback, period_color, line_style_func, line_width, hi_lines, lo_lines, hi_labels, lo_labels, high_label_text, low_label_text) =>
+    var line hi_ln = na
+    var line lo_ln = na
+    var label hi_lb = na
+    var label lo_lb = na
+
+    if is_new_period and not is_last
+        // Create new lines for this period
+        hi_ln := line.new(bar_index, period_high, bar_index, period_high, color=period_color, style=line_style_func, width=line_width)
+        lo_ln := line.new(bar_index, period_low, bar_index, period_low, color=period_color, style=line_style_func, width=line_width)
+
+        // Create labels if enabled
+        if show_period_labels
+            hi_lb := label.new(bar_index, period_high, high_label_text, color=color.new(color.black, 100), textcolor=period_color, size=size.small, style=get_period_label_style())
+            lo_lb := label.new(bar_index, period_low, low_label_text, color=color.new(color.black, 100), textcolor=period_color, size=size.small, style=get_period_label_style())
+
+        // Apply gradient effect if enabled
+        if show_gradient and hi_lines.size() > 1
+            size = hi_lines.size()
+            for i = 0 to size - 1
+                grad_color = color.from_gradient(i, 0, size - 1, color.new(period_color, 100), color.new(period_color, 0))
+                line.set_color(hi_lines.get(i), grad_color)
+                line.set_color(lo_lines.get(i), grad_color)
+                if show_period_labels and hi_labels.size() > i and lo_labels.size() > i
+                    label.set_textcolor(hi_labels.get(i), grad_color)
+                    label.set_textcolor(lo_labels.get(i), grad_color)
+
+        // Add to arrays
+        hi_lines.unshift(hi_ln)
+        lo_lines.unshift(lo_ln)
+        if show_period_labels
+            hi_labels.unshift(hi_lb)
+            lo_labels.unshift(lo_lb)
+
+        // Manage lookback limit
+        if hi_lines.size() > lookback
+            old_hi = hi_lines.pop()
+            old_lo = lo_lines.pop()
+            line.delete(old_hi)
+            line.delete(old_lo)
+
+        if show_period_labels and hi_labels.size() > lookback
+            old_hi_lb = hi_labels.pop()
+            old_lo_lb = lo_labels.pop()
+            label.delete(old_hi_lb)
+            label.delete(old_lo_lb)
+
+    // Extend lines to current bar
+    if hi_lines.size() > 0
+        for i = 0 to hi_lines.size() - 1
+            line.set_x2(hi_lines.get(i), bar_index)
+            line.set_x2(lo_lines.get(i), bar_index)
+            if show_period_labels and hi_labels.size() > i and lo_labels.size() > i
+                label.set_x(hi_labels.get(i), bar_index)
+                label.set_x(lo_labels.get(i), bar_index)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // SESSION OPEN/CLOSE MARKERS
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -559,5 +729,40 @@ track_killzone(is_nypm_kz, nypm_kz_txt, nypm_kz_css)
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// END OF OBSIDIAN v2.5.0 - HYBRID IMPLEMENTATION
+// PREVIOUS PERIOD H/L RENDERING
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Initialize arrays for period high/low lines and labels
+var array<line> daily_hi_lines = array.new<line>()
+var array<line> daily_lo_lines = array.new<line>()
+var array<label> daily_hi_labels = array.new<label>()
+var array<label> daily_lo_labels = array.new<label>()
+
+var array<line> weekly_hi_lines = array.new<line>()
+var array<line> weekly_lo_lines = array.new<line>()
+var array<label> weekly_hi_labels = array.new<label>()
+var array<label> weekly_lo_labels = array.new<label>()
+
+var array<line> monthly_hi_lines = array.new<line>()
+var array<line> monthly_lo_lines = array.new<line>()
+var array<label> monthly_hi_labels = array.new<label>()
+var array<label> monthly_lo_labels = array.new<label>()
+
+// Apply period high/low tracking
+if show_prev_periods
+    // Daily H/L (only on intraday timeframes)
+    if show_daily_hl and timeframe.isintraday
+        track_period_hl(has_daily_changed, daily_high, daily_low, is_last_daily, daily_lookback, daily_color, get_daily_line_style(), daily_line_width, daily_hi_lines, daily_lo_lines, daily_hi_labels, daily_lo_labels, daily_high_label, daily_low_label)
+
+    // Weekly H/L (on intraday and daily timeframes)
+    if show_weekly_hl and (timeframe.isintraday or timeframe.isdaily)
+        track_period_hl(has_weekly_changed, weekly_high, weekly_low, is_last_weekly, weekly_lookback, weekly_color, get_weekly_line_style(), weekly_line_width, weekly_hi_lines, weekly_lo_lines, weekly_hi_labels, weekly_lo_labels, weekly_high_label, weekly_low_label)
+
+    // Monthly H/L (not on monthly timeframes)
+    if show_monthly_hl and not timeframe.ismonthly
+        track_period_hl(has_monthly_changed, monthly_high, monthly_low, is_last_monthly, monthly_lookback, monthly_color, get_monthly_line_style(), monthly_line_width, monthly_hi_lines, monthly_lo_lines, monthly_hi_labels, monthly_lo_labels, monthly_high_label, monthly_low_label)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// END OF OBSIDIAN v3.1.1 - LOOKBACK COUNT BUG FIX
 // ══════════════════════════════════════════════════════════════════════════════
