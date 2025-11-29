@@ -3,12 +3,25 @@ indicator("Obsidian", shorttitle="OBS", overlay=true, max_lines_count=500, max_b
 
 // ══════════════════════════════════════════════════════════════════════════════
 // OBSIDIAN - TradingView All-in-One Indicator
-// Phase 3.1: Previous Period Highs & Lows with Customizable Labels
+// Phase 3B: Higher Timeframe Candles Complete
 //
-// Purpose: ICT-focused trading indicator with sessions, kill zones, and period levels
-// Version: 3.1.1 (Fixed Lookback Count Bug)
+// Purpose: ICT-focused trading indicator with sessions, kill zones, period levels, and HTF candles
+// Version: 3.2.0
 // Author: Generated via Claude Code
-// Date: 2025-11-28
+// Date: 2025-11-29
+//
+// Major Changes in v3.2.0 (Phase 3B):
+// - Added 5 configurable HTF candle slots (5m, 15m, 1H, 4H, Daily)
+// - Fair Value Gap (FVG) detection and visualization
+// - Volume Imbalance (VI) detection and visualization
+// - Trace lines connecting HTF OHLC to formation bars
+// - HTF timer showing remaining time until candle close
+// - Interval value labels (day of week, time)
+// - Custom daily candle open options (Midnight, 8:30, 9:30)
+// - Flexible layout system (offset, buffer, spacing controls)
+// - Independent toggle for each HTF slot
+// - HTF name and timer labels with position control
+// - User timezone integration (uses gmt_tz from settings)
 //
 // Bug Fix in v3.1.1:
 // - Fixed off-by-one error in array size management (lookback + 1 → lookback)
@@ -60,8 +73,18 @@ indicator("Obsidian", shorttitle="OBS", overlay=true, max_lines_count=500, max_b
 // - Customizable label text per period (v3.1.0)
 // - Label position control and gradient support (v3.1.0)
 //
+// Phase 3B Features (Completed):
+// - 5 configurable HTF candle slots (5m, 15m, 1H, 4H, Daily)
+// - Fair Value Gap (FVG) detection and visualization
+// - Volume Imbalance (VI) detection and visualization
+// - Trace lines connecting HTF OHLC to formation bars
+// - HTF timer showing remaining time until candle close
+// - Interval value labels (day of week, time)
+// - Custom daily candle open options (Midnight, 8:30, 9:30)
+// - Flexible layout system (offset, buffer, spacing controls)
+//
 // Future Roadmap:
-// - Phase 3B: Market structure, liquidity zones, FVGs, order blocks
+// - Phase 3C: Market structure, liquidity zones, order blocks
 // - Phase 4: Alerts, widgets, presets
 // - Phase 5: Full trading suite & themes
 // ══════════════════════════════════════════════════════════════════════════════
@@ -82,6 +105,12 @@ var string GRP_KILLZONES = "═══ KILL ZONES ═══"
 var string GRP_KZ_STYLE = "Kill Zone Style"
 var string GRP_PREV_PERIODS = "═══ PREVIOUS PERIOD H/L ═══"
 var string GRP_PREV_STYLE = "Previous Period Style"
+var string GRP_HTF = "═══ HTF CANDLES ═══"
+var string GRP_HTF_SLOTS = "HTF Slots Configuration"
+var string GRP_HTF_STYLE = "HTF Candle Style"
+var string GRP_HTF_LABELS = "HTF Label Settings"
+var string GRP_HTF_IMBALANCE = "HTF Imbalance Detection"
+var string GRP_HTF_TRACE = "HTF Trace Lines"
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -299,6 +328,237 @@ period_label_position = input.string("Right", "Label Position", options=["Right"
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// HTF CANDLES - TYPE DEFINITIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+type Candle
+    float o
+    float c
+    float h
+    float l
+    int o_time
+    int o_idx
+    int c_idx
+    int h_idx
+    int l_idx
+    string dow
+    box body
+    line wick_up
+    line wick_down
+    label dow_label
+
+type Trace
+    line o
+    line c
+    line h
+    line l
+    label o_l
+    label c_l
+    label h_l
+    label l_l
+
+type Imbalance
+    box b
+    int idx
+
+type CandleSettings
+    bool show
+    string htf
+    int max_display
+
+type HTFSettings
+    int max_sets
+    color bull_body
+    color bull_border
+    color bull_wick
+    color bear_body
+    color bear_border
+    color bear_wick
+    int offset
+    int buffer
+    int htf_buffer
+    int width
+    bool use_custom_daily
+    string custom_daily
+    bool daily_name
+    bool trace_show
+    color trace_o_color
+    string trace_o_style
+    int trace_o_size
+    color trace_c_color
+    string trace_c_style
+    int trace_c_size
+    color trace_h_color
+    string trace_h_style
+    int trace_h_size
+    color trace_l_color
+    string trace_l_style
+    int trace_l_size
+    string trace_anchor
+    bool label_show
+    color label_color
+    string label_size
+    string label_position
+    string label_alignment
+    bool fvg_show
+    color fvg_color
+    bool vi_show
+    color vi_color
+    bool htf_label_show
+    color htf_label_color
+    string htf_label_size
+    bool htf_timer_show
+    color htf_timer_color
+    string htf_timer_size
+    color dow_color
+    string dow_size
+
+type CandleSet
+    array<Candle> candles
+    array<Imbalance> imbalances
+    CandleSettings settings
+    label tfNameTop
+    label tfNameBottom
+    label tfTimerTop
+    label tfTimerBottom
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HTF CANDLES - VARIABLE INITIALIZATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+HTFSettings htf_settings = HTFSettings.new()
+
+var CandleSettings SettingsHTF1 = CandleSettings.new()
+var CandleSettings SettingsHTF2 = CandleSettings.new()
+var CandleSettings SettingsHTF3 = CandleSettings.new()
+var CandleSettings SettingsHTF4 = CandleSettings.new()
+var CandleSettings SettingsHTF5 = CandleSettings.new()
+
+var array<Candle> candles_1 = array.new<Candle>(0)
+var array<Candle> candles_2 = array.new<Candle>(0)
+var array<Candle> candles_3 = array.new<Candle>(0)
+var array<Candle> candles_4 = array.new<Candle>(0)
+var array<Candle> candles_5 = array.new<Candle>(0)
+
+var array<Imbalance> imbalances_1 = array.new<Imbalance>()
+var array<Imbalance> imbalances_2 = array.new<Imbalance>()
+var array<Imbalance> imbalances_3 = array.new<Imbalance>()
+var array<Imbalance> imbalances_4 = array.new<Imbalance>()
+var array<Imbalance> imbalances_5 = array.new<Imbalance>()
+
+var CandleSet htf1 = CandleSet.new()
+htf1.settings := SettingsHTF1
+htf1.candles := candles_1
+htf1.imbalances := imbalances_1
+
+var CandleSet htf2 = CandleSet.new()
+htf2.settings := SettingsHTF2
+htf2.candles := candles_2
+htf2.imbalances := imbalances_2
+
+var CandleSet htf3 = CandleSet.new()
+htf3.settings := SettingsHTF3
+htf3.candles := candles_3
+htf3.imbalances := imbalances_3
+
+var CandleSet htf4 = CandleSet.new()
+htf4.settings := SettingsHTF4
+htf4.candles := candles_4
+htf4.imbalances := imbalances_4
+
+var CandleSet htf5 = CandleSet.new()
+htf5.settings := SettingsHTF5
+htf5.candles := candles_5
+htf5.imbalances := imbalances_5
+
+var Trace htf_trace = Trace.new()
+color color_transparent = #ffffff00
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HTF CANDLES - INPUT SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+show_htf_candles = input.bool(true, "Show HTF Candles", tooltip="Master toggle for all HTF candle displays", group=GRP_HTF)
+
+htf1.settings.show := input.bool(true, 'HTF 1', inline='htf1', group=GRP_HTF_SLOTS)
+htf_1 = input.timeframe('5', '', inline='htf1', group=GRP_HTF_SLOTS)
+htf1.settings.htf := htf_1
+htf1.settings.max_display := input.int(10, '', inline='htf1', tooltip="Maximum candles to display for HTF 1", group=GRP_HTF_SLOTS)
+
+htf2.settings.show := input.bool(true, 'HTF 2', inline='htf2', group=GRP_HTF_SLOTS)
+htf_2 = input.timeframe('15', '', inline='htf2', group=GRP_HTF_SLOTS)
+htf2.settings.htf := htf_2
+htf2.settings.max_display := input.int(10, '', inline='htf2', tooltip="Maximum candles to display for HTF 2", group=GRP_HTF_SLOTS)
+
+htf3.settings.show := input.bool(true, 'HTF 3', inline='htf3', group=GRP_HTF_SLOTS)
+htf_3 = input.timeframe('60', '', inline='htf3', group=GRP_HTF_SLOTS)
+htf3.settings.htf := htf_3
+htf3.settings.max_display := input.int(10, '', inline='htf3', tooltip="Maximum candles to display for HTF 3", group=GRP_HTF_SLOTS)
+
+htf4.settings.show := input.bool(true, 'HTF 4', inline='htf4', group=GRP_HTF_SLOTS)
+htf_4 = input.timeframe('240', '', inline='htf4', group=GRP_HTF_SLOTS)
+htf4.settings.htf := htf_4
+htf4.settings.max_display := input.int(10, '', inline='htf4', tooltip="Maximum candles to display for HTF 4", group=GRP_HTF_SLOTS)
+
+htf5.settings.show := input.bool(true, 'HTF 5', inline='htf5', group=GRP_HTF_SLOTS)
+htf_5 = input.timeframe('1D', '', inline='htf5', group=GRP_HTF_SLOTS)
+htf5.settings.htf := htf_5
+htf5.settings.max_display := input.int(10, '', inline='htf5', tooltip="Maximum candles to display for HTF 5", group=GRP_HTF_SLOTS)
+
+htf_settings.max_sets := input.int(5, 'Limit to next HTFs only', minval=1, maxval=5, tooltip="Only show the next N higher timeframes above current chart timeframe", group=GRP_HTF_SLOTS)
+htf_settings.use_custom_daily := input.bool(false, 'Custom daily candle open', inline='customdaily', tooltip="Use custom daily candle open time (US markets)", group=GRP_HTF_SLOTS)
+htf_settings.custom_daily := input.string('Midnight', '', options=['Midnight', '8:30', '9:30'], inline='customdaily', group=GRP_HTF_SLOTS)
+
+htf_settings.bull_body := input.color(color.new(color.green, 10), 'Bullish Body', inline='body', group=GRP_HTF_STYLE)
+htf_settings.bear_body := input.color(color.new(color.red, 10), 'Bearish Body', inline='body', group=GRP_HTF_STYLE)
+htf_settings.bull_border := input.color(color.new(color.black, 10), 'Bullish Border', inline='borders', group=GRP_HTF_STYLE)
+htf_settings.bear_border := input.color(color.new(color.black, 10), 'Bearish Border', inline='borders', group=GRP_HTF_STYLE)
+htf_settings.bull_wick := input.color(color.new(color.black, 10), 'Bullish Wick', inline='wick', group=GRP_HTF_STYLE)
+htf_settings.bear_wick := input.color(color.new(color.black, 10), 'Bearish Wick', inline='wick', group=GRP_HTF_STYLE)
+htf_settings.offset := input.int(10, 'Padding from current candles', minval=1, tooltip="Horizontal offset from current bar", group=GRP_HTF_STYLE)
+htf_settings.buffer := input.int(1, 'Space between candles', minval=1, maxval=4, tooltip="Bar spacing between HTF candles", group=GRP_HTF_STYLE)
+htf_settings.htf_buffer := input.int(10, 'Space between HTF sets', minval=1, maxval=10, tooltip="Bar spacing between different HTF timeframes", group=GRP_HTF_STYLE)
+htf_settings.width := input.int(1, 'Candle Width', minval=1, maxval=4, tooltip="Width of HTF candle bodies", group=GRP_HTF_STYLE) * 2
+
+htf_settings.htf_label_show := input.bool(true, 'HTF Label', inline='HTFlabel', tooltip="Show HTF timeframe name label", group=GRP_HTF_LABELS)
+htf_settings.htf_label_color := input.color(color.new(color.black, 10), '', inline='HTFlabel', group=GRP_HTF_LABELS)
+htf_settings.htf_label_size := input.string(size.large, '', [size.tiny, size.small, size.normal, size.large, size.huge], inline='HTFlabel', group=GRP_HTF_LABELS)
+htf_settings.label_position := input.string("Both", 'Label Positions', options=['Both', 'Top', 'Bottom'], tooltip="Where to show HTF labels", group=GRP_HTF_LABELS)
+htf_settings.label_alignment := input.string("Align", "Label Alignment", options=['Align', 'Follow Candles'], tooltip="Align all HTF labels or follow individual candle sets", group=GRP_HTF_LABELS)
+htf_settings.htf_timer_show := input.bool(true, 'Remaining time', inline='timer', tooltip="Show time remaining until HTF candle close", group=GRP_HTF_LABELS)
+htf_settings.htf_timer_color := input.color(color.new(color.black, 10), '', inline='timer', group=GRP_HTF_LABELS)
+htf_settings.htf_timer_size := input.string(size.normal, '', [size.tiny, size.small, size.normal, size.large, size.huge], inline='timer', group=GRP_HTF_LABELS)
+htf_settings.daily_name := input.bool(false, 'Interval Value', inline='dow', tooltip="Show day of week or time on candles", group=GRP_HTF_LABELS)
+htf_settings.dow_color := input.color(color.black, '', inline='dow', group=GRP_HTF_LABELS)
+htf_settings.dow_size := input.string(size.small, '', [size.tiny, size.small, size.normal, size.large, size.huge], inline='dow', group=GRP_HTF_LABELS)
+htf_settings.label_show := input.bool(false, 'Price Label', inline='label', tooltip="Show price labels on trace lines", group=GRP_HTF_LABELS)
+htf_settings.label_color := input.color(color.new(color.black, 10), '', inline='label', group=GRP_HTF_LABELS)
+htf_settings.label_size := input.string(size.small, '', [size.tiny, size.small, size.normal, size.large, size.huge], inline='label', group=GRP_HTF_LABELS)
+
+htf_settings.fvg_show := input.bool(true, 'Fair Value Gap', inline='fvg', tooltip="Detect and highlight Fair Value Gaps", group=GRP_HTF_IMBALANCE)
+htf_settings.fvg_color := input.color(color.new(color.gray, 80), '', inline='fvg', group=GRP_HTF_IMBALANCE)
+htf_settings.vi_show := input.bool(true, 'Volume Imbalance', inline='vi', tooltip="Detect and highlight Volume Imbalances", group=GRP_HTF_IMBALANCE)
+htf_settings.vi_color := input.color(color.new(color.red, 50), '', inline='vi', group=GRP_HTF_IMBALANCE)
+
+htf_settings.trace_show := input.bool(false, 'Show Trace Lines', tooltip="Draw lines connecting HTF OHLC to formation bars", group=GRP_HTF_TRACE)
+htf_settings.trace_o_color := input.color(color.new(color.gray, 50), 'Open', inline='1', group=GRP_HTF_TRACE)
+htf_settings.trace_o_style := input.string('····', '', options=['⎯⎯⎯', '----', '····'], inline='1', group=GRP_HTF_TRACE)
+htf_settings.trace_o_size := input.int(1, '', options=[1, 2, 3, 4], inline='1', group=GRP_HTF_TRACE)
+htf_settings.trace_c_color := input.color(color.new(color.gray, 50), 'Close', inline='2', group=GRP_HTF_TRACE)
+htf_settings.trace_c_style := input.string('····', '', options=['⎯⎯⎯', '----', '····'], inline='2', group=GRP_HTF_TRACE)
+htf_settings.trace_c_size := input.int(1, '', options=[1, 2, 3, 4], inline='2', group=GRP_HTF_TRACE)
+htf_settings.trace_h_color := input.color(color.new(color.gray, 50), 'High', inline='3', group=GRP_HTF_TRACE)
+htf_settings.trace_h_style := input.string('····', '', options=['⎯⎯⎯', '----', '····'], inline='3', group=GRP_HTF_TRACE)
+htf_settings.trace_h_size := input.int(1, '', options=[1, 2, 3, 4], inline='3', group=GRP_HTF_TRACE)
+htf_settings.trace_l_color := input.color(color.new(color.gray, 50), 'Low', inline='4', group=GRP_HTF_TRACE)
+htf_settings.trace_l_style := input.string('····', '', options=['⎯⎯⎯', '----', '····'], inline='4', group=GRP_HTF_TRACE)
+htf_settings.trace_l_size := input.int(1, '', options=[1, 2, 3, 4], inline='4', group=GRP_HTF_TRACE)
+htf_settings.trace_anchor := input.string('First Timeframe', 'Anchor to', options=['First Timeframe', 'Last Timeframe'], tooltip="Which HTF set to draw trace lines for", group=GRP_HTF_TRACE)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -323,6 +583,331 @@ get_monthly_line_style() =>
 // Get period label style constant based on user selection
 get_period_label_style() =>
     period_label_position == "Left" ? label.style_label_right : label.style_label_left
+
+// HTF Helper methods
+HTFLineStyle(string style) => style == '⎯⎯⎯' ? line.style_solid : style == '----' ? line.style_dashed : line.style_dotted
+
+DayofWeek(int index) => index == 1 ? 'S' : index == 2 ? 'M' : index == 3 ? 'T' : index == 4 ? 'W' : index == 5 ? 'T' : index == 6 ? 'F' : index == 7 ? 'S' : ''
+
+ValidTimeframe(string HTF) =>
+    if timeframe.in_seconds(HTF) >= timeframe.in_seconds('D') and timeframe.in_seconds(HTF) > timeframe.in_seconds()
+        true
+    else
+        n1 = timeframe.in_seconds()
+        n2 = timeframe.in_seconds(HTF)
+        n3 = n1 % n2
+        n1 < n2 and math.round(n2 / n1) == n2 / n1
+
+RemainingTime(string HTF) =>
+    now = time
+    tf = timeframe.in_seconds(HTF) * 1000
+    sinceOpen = (now - time(HTF, '0000-0000:23456', gmt_tz)) % tf
+    remaining = tf - sinceOpen
+    days = math.floor(remaining / 86400000)
+    hours = math.floor((remaining % 86400000) / 3600000)
+    minutes = math.floor((remaining % 3600000) / 60000)
+    daysStr = days > 0 ? str.tostring(days) + 'D ' : ''
+    hoursStr = hours > 0 ? str.tostring(hours) + 'H ' : ''
+    minutesStr = str.tostring(minutes) + 'M'
+    daysStr + hoursStr + minutesStr
+
+HTFName(string HTF) =>
+    tf = timeframe.in_seconds(HTF)
+    days = tf / 86400
+    hours = tf / 3600
+    minutes = tf / 60
+    days >= 1 ? str.tostring(days) + 'D' : hours >= 1 ? str.tostring(hours) + 'H' : str.tostring(minutes) + 'M'
+
+HTFEnabled() =>
+    count = 0
+    if htf1.settings.show
+        count += 1
+    if htf2.settings.show
+        count += 1
+    if htf3.settings.show
+        count += 1
+    if htf4.settings.show
+        count += 1
+    if htf5.settings.show
+        count += 1
+    count
+
+CandleSetHigh(array<Candle> candles, float h) =>
+    _high = h
+    if candles.size() > 0
+        for i = 0 to candles.size() - 1
+            candle = candles.get(i)
+            if candle.h > _high
+                _high := candle.h
+    _high
+
+CandleSetLow(array<Candle> candles, float l) =>
+    _low = l
+    if candles.size() > 0
+        for i = 0 to candles.size() - 1
+            candle = candles.get(i)
+            if candle.l < _low
+                _low := candle.l
+    _low
+
+CandlesHigh() =>
+    _high = high
+    if htf1.settings.show
+        _high := CandleSetHigh(htf1.candles, _high)
+    if htf2.settings.show
+        _high := CandleSetHigh(htf2.candles, _high)
+    if htf3.settings.show
+        _high := CandleSetHigh(htf3.candles, _high)
+    if htf4.settings.show
+        _high := CandleSetHigh(htf4.candles, _high)
+    if htf5.settings.show
+        _high := CandleSetHigh(htf5.candles, _high)
+    _high
+
+CandlesLow() =>
+    _low = low
+    if htf1.settings.show
+        _low := CandleSetLow(htf1.candles, _low)
+    if htf2.settings.show
+        _low := CandleSetLow(htf2.candles, _low)
+    if htf3.settings.show
+        _low := CandleSetLow(htf3.candles, _low)
+    if htf4.settings.show
+        _low := CandleSetLow(htf4.candles, _low)
+    if htf5.settings.show
+        _low := CandleSetLow(htf5.candles, _low)
+    _low
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HTF CANDLES - CANDLESET METHODS
+// ══════════════════════════════════════════════════════════════════════════════
+
+method UpdateTime(CandleSet candleSet, int offset) =>
+    if htf_settings.htf_timer_show and (barstate.isrealtime or barstate.islast)
+        string tmr = '(' + RemainingTime(candleSet.settings.htf) + ')'
+        if not na(candleSet.tfTimerTop)
+            candleSet.tfTimerTop.set_text(tmr)
+        if not na(candleSet.tfTimerBottom)
+            candleSet.tfTimerBottom.set_text(tmr)
+    candleSet
+
+method Reorder(CandleSet candleSet, int offset) =>
+    size = candleSet.candles.size()
+    if size > 0
+        for i = size - 1 to 0 by 1
+            Candle candle = candleSet.candles.get(i)
+            t_buffer = offset + (htf_settings.width + htf_settings.buffer) * (size - i - 1)
+            box.set_left(candle.body, bar_index + t_buffer)
+            box.set_right(candle.body, bar_index + htf_settings.width + t_buffer)
+            line.set_x1(candle.wick_up, bar_index + htf_settings.width / 2 + t_buffer)
+            line.set_x2(candle.wick_up, bar_index + htf_settings.width / 2 + t_buffer)
+            line.set_x1(candle.wick_down, bar_index + htf_settings.width / 2 + t_buffer)
+            line.set_x2(candle.wick_down, bar_index + htf_settings.width / 2 + t_buffer)
+            if htf_settings.daily_name
+                if not na(candle.dow_label)
+                    candle.dow_label.set_y(candle.h)
+                    candle.dow_label.set_x(bar_index + htf_settings.width / 2 + t_buffer)
+                    candle.dow_label.set_text(candle.dow)
+                else
+                    candle.dow_label := label.new(bar_index + htf_settings.width / 2 + t_buffer, candle.h, candle.dow, color=color_transparent, textcolor=htf_settings.dow_color, style=label.style_label_down, size=htf_settings.dow_size)
+    top = 0.0
+    bottom = 0.0
+    if htf_settings.label_alignment == 'Align'
+        top := CandlesHigh()
+        bottom := CandlesLow()
+    if htf_settings.label_alignment == 'Follow Candles'
+        top := CandleSetHigh(candleSet.candles, 0)
+        bottom := CandleSetLow(candleSet.candles, top)
+    left = bar_index + offset + (htf_settings.width + htf_settings.buffer) * (size - 1) / 2
+    if htf_settings.htf_label_show
+        string lblt = HTFName(candleSet.settings.htf)
+        string lbll = lblt
+        if htf_settings.htf_timer_show
+            lblt := lblt + '\n'
+            lbll := '\n' + lbll
+        if htf_settings.daily_name
+            lblt := lblt + '\n'
+        string tmr = '(' + RemainingTime(candleSet.settings.htf) + ')' + (htf_settings.daily_name ? '\n' : '')
+        if htf_settings.label_position == 'Both' or htf_settings.label_position == 'Top'
+            if not na(candleSet.tfNameTop)
+                candleSet.tfNameTop.set_xy(left, top)
+            else
+                candleSet.tfNameTop := label.new(left, top, lblt, color=color_transparent, textcolor=htf_settings.htf_label_color, style=label.style_label_down, size=htf_settings.htf_label_size)
+            if htf_settings.htf_timer_show
+                if not na(candleSet.tfTimerTop)
+                    candleSet.tfTimerTop.set_xy(left, top)
+                else
+                    candleSet.tfTimerTop := label.new(left, top, tmr, color=color_transparent, textcolor=htf_settings.htf_timer_color, style=label.style_label_down, size=htf_settings.htf_timer_size)
+        if htf_settings.label_position == 'Both' or htf_settings.label_position == 'Bottom'
+            if not na(candleSet.tfNameBottom)
+                candleSet.tfNameBottom.set_xy(left, bottom)
+            else
+                candleSet.tfNameBottom := label.new(left, bottom, lbll, color=color_transparent, textcolor=htf_settings.htf_label_color, style=label.style_label_up, size=htf_settings.htf_label_size)
+            if htf_settings.htf_timer_show
+                if htf_settings.htf_timer_show
+                    if not na(candleSet.tfTimerBottom)
+                        candleSet.tfTimerBottom.set_xy(left, bottom)
+                    else
+                        candleSet.tfTimerBottom := label.new(left, bottom, tmr, color=color_transparent, textcolor=htf_settings.htf_timer_color, style=label.style_label_up, size=htf_settings.htf_timer_size)
+    candleSet
+
+method FindImbalance(CandleSet candleSet) =>
+    if barstate.isrealtime or barstate.islast
+        if candleSet.imbalances.size() > 0
+            for i = candleSet.imbalances.size() - 1 to 0 by 1
+                Imbalance del = candleSet.imbalances.get(i)
+                box.delete(del.b)
+                candleSet.imbalances.pop()
+        if candleSet.candles.size() > 3 and htf_settings.fvg_show
+            for i = 0 to candleSet.candles.size() - 3 by 1
+                candle1 = candleSet.candles.get(i)
+                candle2 = candleSet.candles.get(i + 2)
+                candle3 = candleSet.candles.get(i + 1)
+                if candle1.l > candle2.h and math.min(candle1.o, candle1.c) > math.max(candle2.o, candle2.c)
+                    Imbalance imb = Imbalance.new()
+                    imb.b := box.new(box.get_left(candle2.body), candle2.h, box.get_right(candle1.body), candle1.l, bgcolor=htf_settings.fvg_color, border_color=color_transparent, xloc=xloc.bar_index)
+                    candleSet.imbalances.push(imb)
+                if candle1.h < candle2.l and math.max(candle1.o, candle1.c) < math.min(candle2.o, candle2.c)
+                    Imbalance imb = Imbalance.new()
+                    imb.b := box.new(box.get_right(candle1.body), candle1.h, box.get_left(candle2.body), candle2.l, bgcolor=htf_settings.fvg_color, border_color=color_transparent)
+                    candleSet.imbalances.push(imb)
+                box temp = box.copy(candle3.body)
+                box.delete(candle3.body)
+                candle3.body := temp
+                candle3.body
+        if candleSet.candles.size() > 2 and htf_settings.vi_show
+            for i = 0 to candleSet.candles.size() - 2 by 1
+                candle1 = candleSet.candles.get(i)
+                candle2 = candleSet.candles.get(i + 1)
+                if candle1.l < candle2.h and math.min(candle1.o, candle1.c) > math.max(candle2.o, candle2.c)
+                    Imbalance imb = Imbalance.new()
+                    imb.b := box.new(box.get_left(candle2.body), math.min(candle1.o, candle1.c), box.get_right(candle1.body), math.max(candle2.o, candle2.c), bgcolor=htf_settings.vi_color, border_color=color_transparent)
+                    candleSet.imbalances.push(imb)
+                if candle1.h > candle2.l and math.max(candle1.o, candle1.c) < math.min(candle2.o, candle2.c)
+                    Imbalance imb = Imbalance.new()
+                    imb.b := box.new(box.get_right(candle1.body), math.min(candle2.o, candle2.c), box.get_left(candle2.body), math.max(candle1.o, candle1.c), bgcolor=htf_settings.vi_color, border_color=color_transparent)
+                    candleSet.imbalances.push(imb)
+    candleSet
+
+method Monitor(CandleSet candleSet) =>
+    HTFBarTime = time(candleSet.settings.htf, gmt_tz)
+    isNewHTFCandle = ta.change(HTFBarTime) > 0
+    if htf_settings.use_custom_daily
+        int _830 = 0
+        if isNewHTFCandle
+            _830 := timestamp(gmt_tz, year(time), month(time), dayofmonth(time), 0, 0) + 30600000
+        if candleSet.settings.htf == '1D'
+            if htf_settings.custom_daily == 'Midnight'
+                isNewHTFCandle := dayofweek(time, gmt_tz) != dayofweek(time - (time - time[1]), gmt_tz)
+            if htf_settings.custom_daily == '8:30'
+                isNewHTFCandle := not na(time(timeframe.period, "0830-0831:123456", gmt_tz)) and na(time(timeframe.period, "0830-0831:123456", gmt_tz)[1])
+            if htf_settings.custom_daily == '9:30'
+                isNewHTFCandle := not na(time(timeframe.period, "0930-0931:123456", gmt_tz)) and na(time(timeframe.period, "0930-0931:123456", gmt_tz)[1])
+    if isNewHTFCandle
+        Candle candle = Candle.new()
+        candle.o := open
+        candle.c := close
+        candle.h := high
+        candle.l := low
+        candle.o_time := time
+        candle.o_idx := bar_index
+        candle.c_idx := bar_index
+        candle.h_idx := bar_index
+        candle.l_idx := bar_index
+        candle.dow := candleSet.settings.htf == '1D' ? DayofWeek(dayofweek(time_tradingday, gmt_tz)) : str.tonumber(candleSet.settings.htf) < 60 ? str.format_time(candle.o_time, 'm', gmt_tz) : str.tonumber(candleSet.settings.htf) >= 60 ? str.format_time(candle.o_time, 'H', gmt_tz) : candleSet.settings.htf == '1M' ? str.format_time(candle.o_time, 'M', gmt_tz) : ''
+        bull = candle.c > candle.o
+        candle.body := box.new(bar_index, math.max(candle.o, candle.c), bar_index + 2, math.min(candle.o, candle.c), bull ? htf_settings.bull_border : htf_settings.bear_border, 1, bgcolor=bull ? htf_settings.bull_body : htf_settings.bear_body)
+        candle.wick_up := line.new(bar_index + 1, candle.h, bar_index, math.max(candle.o, candle.c), color=bull ? htf_settings.bull_wick : htf_settings.bear_wick)
+        candle.wick_down := line.new(bar_index + 1, math.min(candle.o, candle.c), bar_index, candle.l, color=bull ? htf_settings.bull_wick : htf_settings.bear_wick)
+        candleSet.candles.unshift(candle)
+        if candleSet.candles.size() > candleSet.settings.max_display
+            Candle delCandle = array.pop(candleSet.candles)
+            box.delete(delCandle.body)
+            line.delete(delCandle.wick_up)
+            line.delete(delCandle.wick_down)
+            delCandle.dow_label.delete()
+    candleSet
+
+method Update(CandleSet candleSet, int offset, bool showTrace) =>
+    if candleSet.candles.size() > 0
+        Candle candle = candleSet.candles.first()
+        candle.h_idx := high > candle.h ? bar_index : candle.h_idx
+        candle.h := high > candle.h ? high : candle.h
+        candle.l_idx := low < candle.l ? bar_index : candle.l_idx
+        candle.l := low < candle.l ? low : candle.l
+        candle.c := close
+        candle.c_idx := bar_index
+        bull = candle.c > candle.o
+        box.set_top(candle.body, candle.o)
+        box.set_bottom(candle.body, candle.c)
+        box.set_bgcolor(candle.body, bull ? htf_settings.bull_body : htf_settings.bear_body)
+        box.set_border_color(candle.body, bull ? htf_settings.bull_border : htf_settings.bear_border)
+        line.set_color(candle.wick_up, bull ? htf_settings.bull_wick : htf_settings.bear_wick)
+        line.set_color(candle.wick_down, bull ? htf_settings.bull_wick : htf_settings.bear_wick)
+        line.set_y1(candle.wick_up, candle.h)
+        line.set_y2(candle.wick_up, math.max(candle.o, candle.c))
+        line.set_y1(candle.wick_down, candle.l)
+        line.set_y2(candle.wick_down, math.min(candle.o, candle.c))
+        if barstate.isrealtime or barstate.islast
+            candleSet.Reorder(offset)
+            if htf_settings.trace_show and showTrace
+                if bar_index - candle.o_idx < 5000
+                    if na(htf_trace.o)
+                        htf_trace.o := line.new(candle.o_idx, candle.o, box.get_left(candle.body), candle.o, xloc=xloc.bar_index, color=htf_settings.trace_o_color, style=HTFLineStyle(htf_settings.trace_o_style), width=htf_settings.trace_o_size)
+                        htf_trace.o
+                    else
+                        line.set_xy1(htf_trace.o, candle.o_idx, candle.o)
+                        line.set_xy2(htf_trace.o, box.get_left(candle.body), candle.o)
+                    if htf_settings.label_show
+                        if na(htf_trace.o_l)
+                            htf_trace.o_l := label.new(box.get_right(candle.body), candle.o, str.tostring(candle.o), textalign=text.align_center, style=label.style_label_left, size=htf_settings.label_size, color=color_transparent, textcolor=htf_settings.label_color)
+                            htf_trace.o_l
+                        else
+                            label.set_xy(htf_trace.o_l, box.get_right(candle.body), candle.o)
+                            label.set_text(htf_trace.o_l, str.tostring(candle.o))
+                if bar_index - candle.c_idx < 5000
+                    if na(htf_trace.c)
+                        htf_trace.c := line.new(candle.c_idx, candle.c, box.get_left(candle.body), candle.c, xloc=xloc.bar_index, color=htf_settings.trace_c_color, style=HTFLineStyle(htf_settings.trace_c_style), width=htf_settings.trace_c_size)
+                        htf_trace.c
+                    else
+                        line.set_xy1(htf_trace.c, candle.c_idx, candle.c)
+                        line.set_xy2(htf_trace.c, box.get_left(candle.body), candle.c)
+                    if htf_settings.label_show
+                        if na(htf_trace.c_l)
+                            htf_trace.c_l := label.new(box.get_right(candle.body), candle.c, str.tostring(candle.c), textalign=text.align_center, style=label.style_label_left, size=htf_settings.label_size, color=color_transparent, textcolor=htf_settings.label_color)
+                            htf_trace.c_l
+                        else
+                            label.set_xy(htf_trace.c_l, box.get_right(candle.body), candle.c)
+                            label.set_text(htf_trace.c_l, str.tostring(candle.c))
+                if bar_index - candle.h_idx < 5000
+                    if na(htf_trace.h)
+                        htf_trace.h := line.new(candle.h_idx, candle.h, line.get_x1(candle.wick_up), candle.h, xloc=xloc.bar_index, color=htf_settings.trace_h_color, style=HTFLineStyle(htf_settings.trace_h_style), width=htf_settings.trace_h_size)
+                        htf_trace.h
+                    else
+                        line.set_xy1(htf_trace.h, candle.h_idx, candle.h)
+                        line.set_xy2(htf_trace.h, line.get_x1(candle.wick_up), candle.h)
+                    if htf_settings.label_show
+                        if na(htf_trace.h_l)
+                            htf_trace.h_l := label.new(box.get_right(candle.body), candle.h, str.tostring(candle.h), textalign=text.align_center, style=label.style_label_left, size=htf_settings.label_size, color=color_transparent, textcolor=htf_settings.label_color)
+                            htf_trace.h_l
+                        else
+                            label.set_xy(htf_trace.h_l, box.get_right(candle.body), candle.h)
+                            label.set_text(htf_trace.h_l, str.tostring(candle.h))
+                if bar_index - candle.l_idx < 5000
+                    if na(htf_trace.l)
+                        htf_trace.l := line.new(candle.l_idx, candle.l, line.get_x1(candle.wick_down), candle.l, xloc=xloc.bar_index, color=htf_settings.trace_l_color, style=HTFLineStyle(htf_settings.trace_l_style), width=htf_settings.trace_l_size)
+                        htf_trace.l
+                    else
+                        line.set_xy1(htf_trace.l, candle.l_idx, candle.l)
+                        line.set_xy2(htf_trace.l, line.get_x1(candle.wick_down), candle.l)
+                    if htf_settings.label_show
+                        if na(htf_trace.l_l)
+                            htf_trace.l_l := label.new(box.get_right(candle.body), candle.l, str.tostring(candle.l), textalign=text.align_center, style=label.style_label_left, size=htf_settings.label_size, color=color_transparent, textcolor=htf_settings.label_color)
+                            htf_trace.l_l
+                        else
+                            label.set_xy(htf_trace.l_l, box.get_right(candle.body), candle.l)
+                            label.set_text(htf_trace.l_l, str.tostring(candle.l))
+    candleSet
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -764,5 +1349,84 @@ if show_prev_periods
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// END OF OBSIDIAN v3.1.1 - LOOKBACK COUNT BUG FIX
+// HTF CANDLES - MAIN EXECUTION
+// ══════════════════════════════════════════════════════════════════════════════
+
+int htf_cnt = 0
+int htf_last = HTFEnabled()
+int htf_offset = htf_settings.offset
+
+if htf1.settings.show and ValidTimeframe(htf1.settings.htf)
+    bool showTrace = false
+    if htf_settings.trace_anchor == 'First Timeframe'
+        showTrace := true
+        showTrace
+    if htf_settings.trace_anchor == 'Last Timeframe' and htf_settings.max_sets == 1
+        showTrace := true
+        showTrace
+    htf1.UpdateTime(htf_offset)
+    htf1.Monitor().Update(htf_offset, showTrace).FindImbalance()
+    htf_cnt := htf_cnt + 1
+    htf_offset := htf_offset + (htf_cnt > 0 ? htf1.candles.size() * htf_settings.width + (htf1.candles.size() > 0 ? (htf1.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
+    htf_offset
+
+if htf2.settings.show and ValidTimeframe(htf2.settings.htf) and htf_cnt < htf_last
+    bool showTrace = false
+    if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
+        showTrace := true
+        showTrace
+    if htf_settings.trace_anchor == 'Last Timeframe' and htf_cnt == htf_last - 1
+        showTrace := true
+        showTrace
+    htf2.UpdateTime(htf_offset)
+    htf2.Monitor().Update(htf_offset, showTrace).FindImbalance()
+    htf_cnt := htf_cnt + 1
+    htf_offset := htf_offset + (htf_cnt > 0 ? htf2.candles.size() * htf_settings.width + (htf2.candles.size() > 0 ? (htf2.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
+    htf_offset
+
+if htf3.settings.show and ValidTimeframe(htf3.settings.htf) and htf_cnt < htf_last
+    bool showTrace = false
+    if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
+        showTrace := true
+        showTrace
+    if htf_settings.trace_anchor == 'Last Timeframe' and htf_cnt == htf_last - 1
+        showTrace := true
+        showTrace
+    htf3.UpdateTime(htf_offset)
+    htf3.Monitor().Update(htf_offset, showTrace).FindImbalance()
+    htf_cnt := htf_cnt + 1
+    htf_offset := htf_offset + (htf_cnt > 0 ? htf3.candles.size() * htf_settings.width + (htf3.candles.size() > 0 ? (htf3.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
+    htf_offset
+
+if htf4.settings.show and ValidTimeframe(htf4.settings.htf) and htf_cnt < htf_last
+    bool showTrace = false
+    if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
+        showTrace := true
+        showTrace
+    if htf_settings.trace_anchor == 'Last Timeframe' and htf_cnt == htf_last - 1
+        showTrace := true
+        showTrace
+    htf4.UpdateTime(htf_offset)
+    htf4.Monitor().Update(htf_offset, showTrace).FindImbalance()
+    htf_cnt := htf_cnt + 1
+    htf_offset := htf_offset + (htf_cnt > 0 ? htf4.candles.size() * htf_settings.width + (htf4.candles.size() > 0 ? (htf4.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
+    htf_offset
+
+if htf5.settings.show and ValidTimeframe(htf5.settings.htf) and htf_cnt < htf_last
+    bool showTrace = false
+    if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
+        showTrace := true
+        showTrace
+    if htf_settings.trace_anchor == 'Last Timeframe' and htf_cnt == htf_last - 1
+        showTrace := true
+        showTrace
+    htf5.UpdateTime(htf_offset)
+    htf5.Monitor().Update(htf_offset, showTrace).FindImbalance()
+    htf_cnt := htf_cnt + 1
+    htf_offset := htf_offset + (htf_cnt > 0 ? htf5.candles.size() * htf_settings.width + (htf5.candles.size() > 0 ? (htf5.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
+    htf_offset
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// END OF OBSIDIAN v3.2.0
 // ══════════════════════════════════════════════════════════════════════════════
