@@ -1,481 +1,516 @@
-# 🖤 Obsidian - TradingView All-in-One Indicator
+# 📊 One for All - TradingView All-in-One Indicator
 
-**Version**: 2.0.0 (Phase 1 + 2)
+**Version**: 3.2.1
+**Author**: theCodeman
 **Platform**: TradingView
 **Language**: Pine Script v6
 
 ---
 
-## 📖 Overview
+## 🎯 Overview
 
-Obsidian is an ICT-focused TradingView indicator combining a customizable watermark with powerful session and kill zone visualization. Perfect for traders who need clean, professional chart overlays with precise session timing and kill zone identification.
+**One for All** is a comprehensive ICT (Inner Circle Trader) focused indicator for TradingView that combines essential trading tools into a single, powerful, and highly customizable indicator. Perfect for traders who want professional-grade analysis without cluttering their charts with multiple indicators.
 
-### ✨ Phase 1 Features (Completed)
+### Why "One for All"?
 
-- ✅ **Two-Line Watermark**: Clean overlay fixed at top center of chart with dual-line display
-- ✅ **Title Line**: Display symbol, timeframe, and/or custom title text
-- ✅ **Subtitle Cells**: Up to 3 customizable subtitle fields with pipe separators
-- ✅ **Auto-Refresh**: Automatically updates when switching symbols or timeframes
-- ✅ **Full Style Control**: Customize color, transparency, size, and position
-- ✅ **Performance Optimized**: Single table instance for minimal CPU usage
-- ✅ **Clean UI**: Organized grouped inputs for intuitive configuration
+This indicator eliminates the need for multiple separate indicators by combining:
+- ✅ **Customizable Watermark** - Track your setups and trading plans
+- ✅ **Session & Kill Zone Visualization** - Asian, London, and NY sessions with kill zones
+- ✅ **Previous Period Levels** - Daily, Weekly, and Monthly highs/lows
+- ✅ **Higher Timeframe Candles** - Up to 5 HTF candle displays with FVG/VI detection
+- ✅ **Professional Styling** - Complete control over colors, styles, and visibility
 
-### ✨ Phase 2 Features (Completed)
+---
 
-- ✅ **Three Major Sessions**: Asian (Tokyo), London, and New York trading sessions
-- ✅ **Customizable Timezone**: User-selectable timezone (UTC-12 to UTC+12) with auto-adjustment
-- ✅ **Session Visualization**:
-  - Session high/low horizontal lines with custom labels
-  - Session open/close vertical markers
-  - Optional session background boxes (disabled by default)
-- ✅ **Kill Zones**:
-  - Three kill zone boxes (Asian, London, NY) with customizable times
-  - Colored boxes with adjustable transparency
-  - Optional borders and text labels
-  - Independent toggle controls
-- ✅ **Full Customization**:
-  - Individual colors for each session and kill zone
-  - Custom labels for all elements
-  - Line width and style options
-  - Complete toggle control for each feature
-- ✅ **No Watermark Interference**: Sessions and kill zones render independently
+## ✨ Complete Feature List
+
+### 📝 Watermark System
+- **Dual-Line Display**: Title line + subtitle line for trading notes
+- **Auto-Updating**: Automatically displays current symbol and timeframe
+- **Custom Text**: Add trading plan, bias, key levels, or any notes
+- **Full Style Control**: Color, transparency, size, and position
+- **Performance Optimized**: Single table instance, minimal CPU usage
+
+### 🌏 Session & Kill Zone Visualization
+- **Three Major Sessions**: Asian, London, and New York
+- **Universal Timezone Support**: GMT-12 to GMT+14 (manual DST adjustment)
+- **Session Markers**:
+  - High/Low horizontal lines with custom labels
+  - Open/Close vertical markers
+  - Optional background boxes
+- **Kill Zones**:
+  - Customizable time ranges for each session
+  - Colored boxes with borders and labels
+  - Multi-day history tracking
+- **Full Customization**: Individual colors, labels, and toggles for each element
+
+### 📊 Previous Period High/Low Levels
+- **Three Periods**: Daily (PDH/PDL), Weekly (PWH/PWL), Monthly (PMH/PML)
+- **Customizable Styles**: Choose line style (Solid/Dashed/Dotted) for each period
+- **Line Width Control**: Set width from 1-5 for each period
+- **Lookback Control**: Display last N periods (1-10)
+- **Gradient Effect**: Optional fade for older periods
+- **Custom Labels**: Customize label text and position (Left/Right)
+- **Smart Display**: Auto-adjusts based on current timeframe
+
+### 🕯️ Higher Timeframe (HTF) Candles
+- **5 HTF Slots**: Configure up to 5 different higher timeframes
+- **Default Presets**: 5m, 15m, 1H, 4H, Daily (fully customizable)
+- **OHLC Display**: Open, High, Low, Close levels for each HTF
+- **Fair Value Gaps (FVG)**: Automatic FVG detection and visualization
+- **Volume Imbalance (VI)**: VI detection and shading
+- **Trace Lines**: Connect HTF levels to their formation bars
+- **HTF Timer**: Real-time countdown to next candle close
+- **Interval Labels**: Day of week, time, or custom labels
+- **Flexible Layout**: Control offset, buffer, and spacing
+- **Custom Daily Open**: Choose Midnight, 8:30, or 9:30 daily open
+- **Independent Toggles**: Enable/disable each HTF slot individually
 
 ---
 
 ## 🚀 Installation
 
-### Method 1: TradingView Pine Editor
+### Quick Install (TradingView Pine Editor)
 
-1. Open TradingView and navigate to the **Pine Editor** tab
-2. Click **"New"** to create a new indicator
-3. Copy the contents of `obsidian_v1.pine`
-4. Paste into the Pine Editor
-5. Click **"Save"** and name it "Obsidian"
-6. Click **"Add to Chart"**
+1. **Copy the Code**
+   - Open the `oneforall.pine` file
+   - Copy all contents (Ctrl+A, Ctrl+C)
 
-### Method 2: Import from File
+2. **Open Pine Editor**
+   - Go to TradingView chart
+   - Click "Pine Editor" tab at bottom
 
-1. Download `obsidian_v1.pine`
-2. Open TradingView Pine Editor
-3. Use **File → Import** (if available)
-4. Select the downloaded file
+3. **Create New Indicator**
+   - Click "New" button
+   - Paste the copied code
+   - Click "Save"
 
----
+4. **Add to Chart**
+   - Click "Add to Chart"
+   - Configure settings as desired
 
-## 🎨 Configuration
+### Alternative: Import from File
 
-### Watermark Settings
-
-#### Display Toggle
-
-**Show Watermark**
-- Toggle watermark visibility on/off
-- Default: `ON`
-
-#### Watermark Content (Line 1: Title)
-
-**Title Text**
-- Add custom title text for the first line
-- Example: "Trading Plan", "Focus Zone", "Analysis"
-- Default: `Empty`
-
-**Show Symbol**
-- Display current symbol ticker in title (e.g., BTCUSD, AAPL)
-- Default: `ON`
-
-**Show Timeframe**
-- Display current chart timeframe in title (e.g., 1H, 1D, 4H)
-- Default: `ON`
-
-#### Watermark Content (Line 2: Subtitles)
-
-**Subtitle 1, 2, 3**
-- Add up to 3 subtitle cells for the second line
-- Separated by pipe characters "|"
-- Example: "Entry: 45000 | Stop: 44000 | Target: 48000"
-- Default: `Empty`
-
-#### Watermark Style
-
-**Text Color**
-- Choose watermark text color
-- Default: `White`
-
-**Transparency**
-- Control text visibility (0 = opaque, 100 = invisible)
-- Range: 0-100
-- Default: `50`
-
-**Font Size**
-- Select text size: Auto, Tiny, Small, Normal, Large, Huge
-- Default: `Normal`
-
-**Position**
-- Horizontal alignment: Left, Center, Right
-- Default: `Center`
+1. Download `oneforall.pine` from the repository
+2. In TradingView Pine Editor: File → Import
+3. Select downloaded file
+4. Click "Add to Chart"
 
 ---
 
-### Time Zones Settings
+## ⚙️ Configuration Guide
 
-**User Timezone**
-- Select your reference timezone (UTC-12 to UTC+12)
-- All session and kill zone times adjust automatically
-- Default: `UTC-5` (New York/EST)
+### General Settings
+
+**Drawing Limit (Days)**
+- Controls how many days of sessions/kill zones to display
+- Range: 1-10 days
+- Default: 3 days
+- Impact: Lower = better performance, higher = more history
+
+**Timezone**
+- Your local timezone (GMT-12 to GMT+14)
+- All session times adjust to your selected timezone
+- Note: Does NOT auto-adjust for Daylight Saving Time
+- Default: GMT-5 (New York/EST)
 
 ---
 
-### Sessions Settings
+### Watermark Configuration
 
-#### Sessions - Display Toggles
+#### Display Control
+- **Show Watermark**: Master toggle (ON/OFF)
 
-**Show All Sessions**
-- Master toggle for all session displays
-- Default: `ON`
+#### Content Settings - Line 1 (Title)
+- **Title Text**: Custom text (e.g., "Long Bias", "Scalping Setup")
+- **Show Symbol**: Display current symbol (e.g., BTCUSD)
+- **Show Timeframe**: Display current timeframe (e.g., 1H, 15m)
 
-**Asian Session / London Session / New York Session**
-- Individual toggles for each session
-- Default: `ON` for all
+#### Content Settings - Line 2 (Subtitles)
+- **Subtitle 1**: First custom field
+- **Subtitle 2**: Second custom field
+- **Subtitle 3**: Third custom field
+- *Separated by pipe "|" symbol*
 
-#### Session Times
+#### Style Settings
+- **Text Color**: Any color
+- **Transparency**: 0-100 (0 = solid, 100 = invisible)
+- **Font Size**: Auto, Tiny, Small, Normal, Large, Huge
+- **Position**: Left, Center, Right
 
-Configure start and end hours for each session in your selected timezone:
+**Example Watermark**:
+```
+BTCUSD | 1H | Long Bias
+Entry: 45000 | Stop: 44000 | Target: 48000
+```
 
-**Asian Session**
-- Start Hour: `0` (midnight)
-- End Hour: `9` (9 AM)
+---
 
-**London Session**
-- Start Hour: `2` (2 AM)
-- End Hour: `12` (12 PM)
+### Session & Kill Zone Configuration
 
-**New York Session**
-- Start Hour: `8` (8 AM)
-- End Hour: `17` (5 PM)
+#### Session Display Toggles
+- **Show All Sessions**: Master toggle for all sessions
+- **Individual Session Toggles**: Asian, London, New York
+
+#### Session Configuration (for each session)
+Each session has:
+- **Checkbox**: Enable/disable this session
+- **Label Text**: Custom name (e.g., "Asian", "Tokyo")
+- **Time Range**: HHMM-HHMM format (e.g., "0000-0900")
+- **Color**: Session color for lines and markers
+
+**Default Session Times (GMT-5)**:
+- Asian: 0000-0900 (Midnight to 9 AM)
+- London: 0800-1600 (8 AM to 4 PM)
+- New York: 1300-2200 (1 PM to 10 PM)
 
 #### Session Markers
+- **Show Session High/Low**: Horizontal lines at session extremes
+- **Show Session Open/Close**: Vertical markers at session boundaries
+- **Show Session Background**: Optional colored boxes
 
-**Session Highs / Session Lows**
-- Show horizontal lines at session high/low levels
-- Default: `ON` for both
+#### Session Styling
+- **Line Width**: 1-5
+- **Line Style**: Solid, Dashed, Dotted
+- **Background Transparency**: 0-100 (default: 90)
 
-**Session Open / Session Close**
-- Show vertical lines marking session boundaries
-- Default: `ON` for both
+#### Kill Zone Configuration
+Each kill zone has:
+- **Checkbox**: Enable/disable
+- **Label**: Custom name
+- **Time Range**: HHMM-HHMM format
+- **Color**: Box color
 
-#### Session Labels
+**Default Kill Zone Times (GMT-5)**:
+- Asian KZ: 0000-0300
+- London KZ: 0200-0500
+- NY KZ: 0700-1000
 
-**Asian Label / London Label / NY Label**
-- Customize text labels for each session
-- Default: `"Asian"`, `"London"`, `"New York"`
-
-#### Session Style
-
-**Asian Color / London Color / NY Color**
-- Choose colors for each session's lines and markers
-- Default: Yellow (Asian), Blue (London), Green (NY)
-
-**Show Session Background**
-- Enable optional background boxes for sessions
-- Default: `OFF`
-
-**BG Transparency**
-- Background box transparency (0-100)
-- Default: `90`
-
-**Line Width**
-- Session line thickness (1-5)
-- Default: `1`
-
-**Line Style**
-- Choose line style: Solid, Dashed, Dotted
-- Default: `Solid`
+#### Kill Zone Styling
+- **Transparency**: 0-100 (default: 85)
+- **Show Border**: ON/OFF
+- **Border Color**: Any color (default: White)
+- **Border Width**: 1-5
+- **Show Labels**: ON/OFF
+- **Label Size**: Tiny, Small, Normal, Large
+- **Label Color**: Any color
 
 ---
 
-### Kill Zones Settings
+### Previous Period H/L Configuration
 
-#### Kill Zones - Display Toggles
+#### Display Toggles
+- **Show Previous Period H/L**: Master toggle
+- **Show Daily**: Previous Day High/Low
+- **Show Weekly**: Previous Week High/Low
+- **Show Monthly**: Previous Month High/Low
 
-**Show All Kill Zones**
-- Master toggle for all kill zone displays
-- Default: `ON`
+#### Style Settings (for each period)
+- **Color**: Line color
+- **Line Style**: Solid, Dashed, Dotted
+- **Line Width**: 1-5
+- **Lookback**: How many periods to display (1-10)
 
-**Asian Kill Zone / London Kill Zone / NY Kill Zone**
-- Individual toggles for each kill zone
-- Default: `ON` for all
+#### Label Configuration
+- **Enable Labels**: Show/hide labels
+- **Label Text**: Custom text (e.g., "PDH", "PWH", "PMH")
+- **Label Position**: Left or Right
+- **Gradient Effect**: Fade older periods
 
-#### Kill Zone Times
+**Default Labels**:
+- Daily: PDH, PDL
+- Weekly: PWH, PWL
+- Monthly: PMH, PML
 
-Configure start and end hours for each kill zone in your selected timezone:
+---
 
-**Asian Kill Zone**
-- Start Hour: `0`
-- End Hour: `3`
+### Higher Timeframe Candles Configuration
 
-**London Kill Zone**
-- Start Hour: `2` (2:00 AM EST / 7:00 AM GMT)
-- End Hour: `5` (5:00 AM EST / 10:00 AM GMT)
+#### HTF Slot Configuration
+**5 Independent Slots** - Each with:
+- **Enable**: ON/OFF toggle
+- **Timeframe**: Select any timeframe (e.g., "5", "15", "60", "240", "D")
+- **Label**: Custom name for this HTF
 
-**New York Kill Zone**
-- Start Hour: `7` (7:00 AM EST)
-- End Hour: `10` (10:00 AM EST)
+**Default HTF Slots**:
+1. 5m (5-minute candles)
+2. 15m (15-minute candles)
+3. 1H (1-hour candles)
+4. 4H (4-hour candles)
+5. Daily (Daily candles)
 
-#### Kill Zone Labels
+#### HTF Display Elements
+- **Show HTF Candles**: Master toggle for all HTF
+- **Show OHLC Lines**: Display Open/High/Low/Close levels
+- **Show Trace Lines**: Connect HTF levels to formation bars
+- **Show HTF Timer**: Countdown to next candle close
+- **Show Interval Labels**: Day/time labels on candles
 
-**Asian KZ Label / London KZ Label / NY KZ Label**
-- Customize text labels for each kill zone
-- Default: `"Asian KZ"`, `"London KZ"`, `"NY KZ"`
+#### HTF Candle Styling
+- **Bullish Color**: Color for up candles
+- **Bearish Color**: Color for down candles
+- **Line Width**: 1-5
+- **Border Width**: Border thickness
+- **Border Style**: Solid, Dashed, Dotted
 
-#### Kill Zone Style
+#### HTF Imbalance Detection
+- **Show FVG (Fair Value Gaps)**: Detect and display FVGs
+- **FVG Color**: Color for FVG boxes
+- **FVG Transparency**: 0-100
+- **Show VI (Volume Imbalance)**: Detect and display VIs
+- **VI Color**: Color for VI boxes
+- **VI Transparency**: 0-100
 
-**Asian KZ Color / London KZ Color / NY KZ Color**
-- Choose colors for each kill zone box
-- Default: Yellow, Blue, Green (all with 85% transparency)
+#### HTF Layout Control
+- **Candle Offset**: Horizontal spacing from current bar
+- **Candle Buffer**: Vertical spacing between HTF candles
+- **Candle Spacing**: Gap between individual candles
+- **Daily Open**: Choose Midnight, 8:30, or 9:30 for daily open
 
-**KZ Transparency**
-- Kill zone box transparency (0-100)
-- Default: `85`
-
-**Show KZ Border**
-- Display border on kill zone boxes
-- Default: `ON`
-
-**Border Color / Border Width**
-- Customize kill zone borders
-- Default: White (50% transparency), Width: `1`
-
-**Show KZ Labels**
-- Display text labels on kill zones
-- Default: `ON`
-
-**Label Size / Label Color**
-- Customize kill zone label appearance
-- Default: Small, White
+#### HTF Label Settings
+- **Show HTF Name**: Display HTF label (e.g., "5m", "1H")
+- **Show HTF Timer**: Display countdown timer
+- **Label Size**: Font size
+- **Label Color**: Text color
+- **Label Position**: Top, Middle, Bottom
 
 ---
 
 ## 💡 Usage Examples
 
-### Basic Setup
+### Example 1: Day Trading Setup
+**Goal**: Track intraday sessions with HTF context
 
-1. Add Obsidian to your chart
-2. Watermark displays symbol and timeframe by default
-3. Sessions and kill zones display automatically
-4. Adjust transparency and colors as needed
+**Configuration**:
+- Enable all 3 sessions (Asian, London, NY)
+- Enable all kill zones
+- Show Daily high/low (PDH/PDL)
+- Enable 5m and 15m HTF candles
+- Watermark: "EURUSD | 5m | Scalping"
 
-### Watermark Only (Minimal)
+**Result**: Full session visualization with immediate HTF context
 
-1. Disable "Show All Sessions" and "Show All Kill Zones"
-2. Customize watermark content and style
-3. Result: Clean two-line text overlay without session markers
+---
 
-### ICT Trading Setup (Full Features)
+### Example 2: Swing Trading Setup
+**Goal**: Multi-day perspective with key levels
 
-1. Set your timezone to match your trading timezone
-2. Enable all sessions and kill zones
-3. Customize colors:
-   - London: Blue for lines and kill zones
-   - New York: Green for lines and kill zones
-   - Asian: Yellow for lines and kill zones
-4. Result: Complete ICT session and kill zone visualization
+**Configuration**:
+- Disable sessions and kill zones
+- Enable Weekly and Monthly H/L
+- Enable 4H and Daily HTF candles
+- Watermark: Custom trading plan
+- Lookback: 5 periods for W/M levels
 
-### Session-Only Display
+**Result**: Clean chart focused on major levels and HTF structure
 
-1. Enable "Show All Sessions"
-2. Disable "Show All Kill Zones"
-3. Customize session colors and labels
-4. Result: Session high/low lines with open/close markers
+---
 
-### Kill Zones Only
+### Example 3: ICT Kill Zone Focus
+**Goal**: Trade only during specific kill zones
 
-1. Disable "Show All Sessions"
-2. Enable "Show All Kill Zones"
-3. Customize kill zone times and colors
-4. Result: Clean kill zone boxes without session lines
+**Configuration**:
+- Disable sessions background (keep lines)
+- Enable all kill zones with high visibility
+- Enable session high/low lines
+- Enable 1H and 4H HTF for context
+- FVG detection ON
 
-### Custom Timezone Example (London Trader)
+**Result**: Highlighted kill zones with HTF context and FVG opportunities
 
-1. Set timezone to UTC+0 (GMT)
-2. Adjust session times:
-   - London: 8:00-17:00 (8 AM to 5 PM GMT)
-   - New York: 13:00-22:00 (1 PM to 10 PM GMT)
-   - Asian: 0:00-9:00 (midnight to 9 AM GMT)
-3. Adjust kill zone times accordingly
-4. Result: Sessions display in your local time
+---
 
-### Combining Features
+### Example 4: Multi-Timeframe Analysis
+**Goal**: Complete HTF structure analysis
 
-**Example 1: Trading Plan with Sessions**
-- Line 1 Watermark: "BTCUSD | 1H | Long Bias"
-- Line 2: "Entry: 45000 | Target: 50000"
-- Enable London and NY sessions with kill zones
-- Result: Complete trading setup with visual zones
+**Configuration**:
+- Enable all 5 HTF slots
+- Enable FVG and VI detection for all
+- Enable trace lines
+- Show HTF timers
+- Custom HTF: 5m, 15m, 1H, 4H, D
 
-**Example 2: Multi-Timeframe Analysis**
-- Keep watermark for symbol/timeframe info
-- Enable session backgrounds for visual separation
-- Add custom notes about trend direction
-- Result: Clean analysis overlay with session context
+**Result**: Complete view of market structure across 5 timeframes
+
+---
+
+### Example 5: Clean Minimal Setup
+**Goal**: Just watermark and key levels
+
+**Configuration**:
+- Disable all sessions and kill zones
+- Enable only Daily H/L
+- Disable all HTF candles
+- Watermark with trading plan
+
+**Result**: Ultra-clean chart with just key reference levels
+
+---
+
+## 🎨 Customization Tips
+
+### Color Schemes
+
+**Professional Dark Theme**:
+- Sessions: Subtle blues/grays
+- Kill Zones: High transparency (90%)
+- HTF: Contrasting colors (green/red)
+- Watermark: Low transparency (30%)
+
+**High Visibility Theme**:
+- Sessions: Bright colors (yellow/blue/green)
+- Kill Zones: Medium transparency (70%)
+- HTF: Bold colors
+- Watermark: High transparency (60%)
+
+### Performance Tips
+
+1. **Reduce Drawing Limit**: Set to 1-2 days if chart is slow
+2. **Disable Unused Features**: Turn off HTF slots you don't use
+3. **Limit HTF Candles**: Enable only 2-3 HTF slots
+4. **Reduce Lookback**: Set to 1-3 periods for previous levels
+5. **Disable Trace Lines**: Turn off if not needed
+
+### Layout Tips
+
+1. **HTF Offset**: Increase to move HTF candles right for clarity
+2. **HTF Buffer**: Increase for more vertical spacing
+3. **HTF Spacing**: Adjust gap between individual candles
+4. **Label Position**: Use "Left" to keep right side clean
 
 ---
 
 ## 🔧 Technical Details
 
-### Performance
+### Performance Optimizations
+- **Single Table Instance**: Watermark uses one table for minimal overhead
+- **Array-Based Tracking**: Efficient multi-day session/period management
+- **Drawing Limits**: Prevents chart overload with configurable limits
+- **Last Bar Updates**: Most calculations only on `barstate.islast`
+- **Optimized Loops**: Minimal iteration for HTF candle rendering
 
-- **Single Table Instance**: Optimized pattern using `var` keyword with fixed screen positioning
-- **Last Bar Only**: Updates only on `barstate.islast` for minimal CPU usage
-- **Efficient Text Building**: Conditional concatenation without redundant operations
-- **Auto-Refresh**: Leverages built-in Pine Script variables (no manual refresh logic)
+### Compatibility
+- **Pine Script**: v6
+- **TradingView**: All chart types
+- **Symbols**: Stocks, Forex, Crypto, Futures, Indices
+- **Timeframes**: Works on all timeframes (HTF validates automatically)
 
-### Auto-Update Mechanism
-
-- **Symbol Changes**: `syminfo.ticker` automatically updates
-- **Timeframe Changes**: `timeframe.period` automatically updates
-- **Table Update**: Watermark table cell updates on every relevant change
-
-### Code Structure
-
-- **Modular Design**: Clear separation of inputs, logic, and display
-- **Grouped Inputs**: Organized UI with Display/Content/Style sections
-- **Expansion Ready**: Structured for future ICT features (Phases 2-5)
-- **Well Documented**: Comprehensive inline comments for maintainability
-
----
-
-## 🗺️ Roadmap
-
-### ✅ Phase 1: Watermark Foundation (Completed)
-
-- Customizable watermark overlay
-- Symbol and timeframe display
-- Custom subtitle cells
-- Full style customization
-
-### ✅ Phase 2: ICT Kill Zones & Sessions (Completed)
-
-- Three major trading sessions (Asian, London, New York)
-- Customizable timezone support
-- Session high/low lines with labels
-- Session open/close markers
-- Kill zone boxes with full customization
-- Optional session backgrounds
-
-### Phase 3: Market Structure (Planned)
-
-- Fair Value Gaps (FVG) detection
-- Liquidity zone identification
-- Order blocks
-- Market structure breaks
-- Swing high/low markers
-- Break of structure (BOS) detection
-
-### Phase 4: Alerts & Presets (Planned)
-
-- Custom alert conditions for sessions and kill zones
-- Alert on FVG formations
-- Preset configurations for different trading styles
-- Widget system for quick access
-- Export/import settings
-
-### Phase 5: Full Trading Suite (Planned)
-
-- Theme system with color presets
-- Advanced customization engine
-- Multi-indicator coordination
-- Performance optimization
-- Educational tooltips and guides
-
----
-
-## ✅ Acceptance Criteria
-
-### Phase 1 Criteria
-
-| Criterion                    | Status |
-| ---------------------------- | ------ |
-| Watermark displays correctly | ✅     |
-| Custom text updates live     | ✅     |
-| Symbol auto-updates          | ✅     |
-| Timeframe auto-updates       | ✅     |
-| Style controls functional    | ✅     |
-| Only one table instance      | ✅     |
-| Toggle hides watermark       | ✅     |
-| No script errors             | ✅     |
-| Works all symbols/timeframes | ✅     |
-
-### Phase 2 Criteria
-
-| Criterion                          | Status |
-| ---------------------------------- | ------ |
-| Sessions detect correctly          | ✅     |
-| Timezone adjustment works          | ✅     |
-| Session highs/lows accurate        | ✅     |
-| Kill zones render properly         | ✅     |
-| All toggles function               | ✅     |
-| Custom times adjust kill zones     | ✅     |
-| Labels display correctly           | ✅     |
-| No interference with watermark     | ✅     |
-| Performance optimized              | ✅     |
-| Works across all sessions/timeframes | ✅     |
+### Limitations
+- **Drawing Limits**: Max 500 lines/boxes/labels per indicator (TradingView limit)
+- **HTF Slots**: Maximum 5 HTF timeframes
+- **Session History**: Limited by "Drawing Limit" setting (1-10 days)
+- **Timezone**: Manual DST adjustment required
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Watermark Not Visible
+### Watermark Not Showing
+- ✅ Check "Show Watermark" is enabled
+- ✅ Verify transparency is not 100%
+- ✅ Ensure at least one content option is enabled
+- ✅ Check text color contrasts with chart background
 
-- Check "Show Watermark" is enabled in Display Settings
-- Verify transparency is not set to 100 (fully transparent)
-- Ensure text color contrasts with chart background
-- Confirm at least one content option is enabled (Symbol/Timeframe/Custom Note)
+### Sessions Not Displaying
+- ✅ Check "Show All Sessions" is enabled
+- ✅ Verify individual session toggles are ON
+- ✅ Confirm session times are correct for your timezone
+- ✅ Check if chart timeframe is appropriate
 
-### Text Not Updating
+### HTF Candles Not Showing
+- ✅ Ensure "Show HTF Candles" master toggle is ON
+- ✅ Verify individual HTF slot is enabled
+- ✅ Check HTF timeframe is HIGHER than chart timeframe
+- ✅ Confirm HTF timeframe is valid (e.g., "5", "15", "60", "D")
 
-- Watermark auto-updates on symbol/timeframe changes
-- If issues persist, remove and re-add indicator to chart
-- Check Pine Editor for any script errors
-
-### Style Changes Not Applying
-
-- Position changes require label recreation (may take 1 bar to update)
-- Color/transparency changes apply immediately
-- Refresh chart if changes don't appear
+### Previous Period Levels Missing
+- ✅ Check "Show Previous Period H/L" is enabled
+- ✅ Verify individual period (D/W/M) is enabled
+- ✅ Ensure lookback is set to 1 or higher
+- ✅ Confirm chart timeframe is appropriate (lower than period)
 
 ### Performance Issues
-
-- Obsidian uses optimized single-label pattern
-- Should have minimal CPU impact
-- If issues occur, check for conflicts with other heavy indicators
+- ✅ Reduce "Drawing Limit" to 1-2 days
+- ✅ Disable unused HTF slots
+- ✅ Turn off FVG/VI detection if not needed
+- ✅ Reduce lookback for previous periods
+- ✅ Disable trace lines
 
 ---
 
 ## 📋 Version History
 
-### v2.0.0 - Phase 2 (2025-11-24)
+### v3.2.1 (2025-11-30) - Bug Fix
+- **Fixed**: HTF visibility on non-divisible timeframes
+  - M5 HTF now shows on M3, M2, M1 charts
+  - Simplified `ValidTimeframe()` function
+  - All higher timeframes now display correctly
 
-- ✨ Major feature release: Sessions & Kill Zones
-- ✅ Three major trading sessions (Asian, London, New York)
-- ✅ Customizable timezone support (UTC-12 to UTC+12)
-- ✅ Session high/low horizontal lines with custom labels
-- ✅ Session open/close vertical markers
-- ✅ Kill zone boxes with full customization
-- ✅ Optional session background boxes
-- ✅ Individual toggle controls for all features
-- ✅ Complete color and style customization
-- ✅ Reorganized settings into logical zones
-- ✅ No interference with existing watermark functionality
+### v3.2.0 (2025-11-30) - Phase 3B Complete
+- **Added**: 5 configurable HTF candle slots
+- **Added**: Fair Value Gap (FVG) detection
+- **Added**: Volume Imbalance (VI) detection
+- **Added**: Trace lines for HTF OHLC
+- **Added**: HTF timer with countdown
+- **Added**: Interval value labels
+- **Added**: Custom daily open options
+- **Added**: Flexible layout system
 
-### v1.0.0 - Phase 1 (2025-11-23)
+### v3.1.1 (2025-11-29) - Bug Fix
+- **Fixed**: Array size management off-by-one error
+- Now correctly displays N periods when lookback = N
 
-- ✨ Initial release
-- ✅ Customizable watermark overlay
-- ✅ Symbol and timeframe display
-- ✅ Custom subtitle cells
-- ✅ Full style customization
-- ✅ Auto-refresh functionality
-- ✅ Performance optimized
+### v3.1.0 (2025-11-29) - Period Labels
+- **Added**: Customizable label text for period H/L
+- **Added**: Label position control (Left/Right)
+- **Added**: Gradient effect for labels
+- **Added**: Independent label array management
+
+### v3.0.0 (2025-11-28) - Phase 3 Complete
+- **Added**: Daily/Weekly/Monthly H/L lines
+- **Added**: Line style selection per period
+- **Added**: Line width control per period
+- **Added**: Lookback controls
+- **Added**: Gradient effect for older periods
+- **Added**: Array-based period tracking
+
+### v2.3.0 (2025-11-27) - Phase 2 Complete
+- **Added**: Session visualization (Asian, London, NY)
+- **Added**: Kill zone boxes
+- **Added**: Universal timezone support
+- **Added**: Multi-day history tracking
+
+### v1.0.0 (2025-11-23) - Phase 1 Complete
+- **Added**: Customizable watermark
+- **Added**: Symbol and timeframe display
+- **Added**: Subtitle cells
+- **Added**: Full style customization
+
+---
+
+## 📖 Development
+
+### Project Structure
+```
+obsidian/
+├── oneforall.pine          # Main indicator file
+├── README.md               # This file
+├── CHANGELOG.md            # Detailed version history
+├── CLAUDE.md               # Developer guidance
+└── docs/                   # Additional documentation
+    ├── INSTALLATION.md
+    ├── INDEX.md
+    └── development/        # Developer resources
+```
+
+### Contributing
+This project is maintained by theCodeman. For suggestions or issues, please refer to the project repository.
+
+### Development Tools
+- **Language**: Pine Script v6
+- **Platform**: TradingView
+- **Testing**: Manual testing in TradingView required
+- **Version Control**: Git
 
 ---
 
@@ -485,32 +520,26 @@ This indicator is provided as-is for personal and educational use on TradingView
 
 ---
 
-## 🤝 Support
+## 🙏 Acknowledgments
 
-For issues, suggestions, or feature requests:
-
-- Review `IMPLEMENTATION_WORKFLOW.md` for technical details
-- Check `QUICK_START.md` for development reference
-- Consult TradingView Pine Script documentation
+Built with modern Pine Script v6 features and best practices. Incorporates ICT (Inner Circle Trader) concepts and methodologies.
 
 ---
 
-## 🎯 Quick Start
+## 🎯 Quick Start Checklist
 
-```
-1. Copy obsidian_v1.pine code
-2. Paste into TradingView Pine Editor
-3. Save as "Obsidian"
-4. Add to chart
-5. Customize in indicator settings
-```
-
-**That's it!** Your watermark is ready. Customize to fit your trading style.
+1. ✅ Install indicator in TradingView
+2. ✅ Set your timezone in Settings
+3. ✅ Configure watermark with your trading plan
+4. ✅ Enable sessions/kill zones you trade
+5. ✅ Add HTF candles for your timeframe
+6. ✅ Customize colors and styles
+7. ✅ Start trading with One for All!
 
 ---
 
-**Built with**: Pine Script v6
-**Optimized for**: All TradingView charts
-**Compatible with**: Stocks, Forex, Crypto, Futures, and more
+**One for All** - Everything you need, all in one indicator.
 
-🖤 **Obsidian** - Clean. Professional. Expandable.
+Author: theCodeman
+Version: 3.2.1
+Built with: Pine Script v6
