@@ -4,7 +4,7 @@ indicator("One for All", shorttitle="OFA", overlay=true, max_lines_count=500, ma
 // ══════════════════════════════════════════════════════════════════════════════
 // ONE FOR ALL - ICT-Focused TradingView Indicator
 // ══════════════════════════════════════════════════════════════════════════════
-// Version: 3.3.1 | Author: theCodeman | Date: 2025-12-05
+// Version: 3.4.0 | Author: theCodeman | Date: 2025-12-05
 //
 // PURPOSE: All-in-one indicator for Inner Circle Trader (ICT) analysis with
 // sessions, kill zones, previous period levels, and higher timeframe candles.
@@ -13,7 +13,8 @@ indicator("One for All", shorttitle="OFA", overlay=true, max_lines_count=500, ma
 //
 // KEY FEATURES:
 // • Customizable watermark with symbol/timeframe display
-// • Status Dashboard with quick visual reference for enabled features (NEW in v3.3.1)
+// • Quick Toggles section at top of settings for instant feature control (NEW in v3.4.0)
+// • Status Dashboard with quick visual reference for enabled features
 // • Trading sessions (Asian/London/NY) with high/low tracking
 // • Kill zones with customizable time ranges
 // • Previous period H/L lines (Daily/Weekly/Monthly) with custom styles
@@ -27,13 +28,12 @@ indicator("One for All", shorttitle="OFA", overlay=true, max_lines_count=500, ma
 // ✓ Phase 3B: HTF candles with FVG/VI detection
 // ○ Phase 3C: Market structure (liquidity zones, order blocks) - Planned
 //
-// RECENT UPDATES (v3.3.1):
-// • NEW: Status Dashboard - Quick visual reference showing enabled/disabled features
-// • Real-time status indicators for: Watermark, Sessions, Kill Zones, Previous Period, HTF Candles
-// • Color-coded checkmarks (✓ green = enabled, ✗ red = disabled)
-// • 9 customizable positions (Top/Middle/Bottom Left/Center/Right)
-// • Customizable background transparency (0-100)
-// • Zero performance impact - updates only on last bar, uses only 1 drawing object
+// RECENT UPDATES (v3.4.0):
+// • NEW: Quick Toggles - All 5 master feature toggles at top of settings panel for instant access
+// • No more scrolling through settings to enable/disable features
+// • Optimized Quick Toggles section shows first when settings panel opens
+// • FIXED: HTF Candles master toggle now properly controls all HTF rendering (bug fix)
+// • Enhanced user experience with streamlined settings organization
 //
 // For detailed version history, see CHANGELOG.md
 // For development guide, see CLAUDE.md
@@ -46,6 +46,7 @@ indicator("One for All", shorttitle="OFA", overlay=true, max_lines_count=500, ma
 
 // Define input group constants for organized UI
 var string GRP_SETTINGS = "═══ SETTINGS ═══"
+var string GRP_QUICK_TOGGLES = "═══ QUICK TOGGLES ═══"
 var string GRP_WATERMARK = "═══ WATERMARK ═══"
 var string GRP_WATERMARK_CONTENT = "Watermark Content"
 var string GRP_WATERMARK_STYLE = "Watermark Style"
@@ -84,11 +85,23 @@ gmt_tz = input.string('GMT-5', "Timezone", options=['GMT-12','GMT-11','GMT-10','
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// WATERMARK SETTINGS
+// QUICK TOGGLES - Master Feature Switches
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Display Toggle
-showWatermark = input.bool(true, "Enable/Disable Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_WATERMARK)
+showWatermark = input.bool(true, "Enable/Disable Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_QUICK_TOGGLES)
+
+showSessions = input.bool(true, "Enable/Disable Sessions", tooltip="Master toggle for all session displays", group=GRP_QUICK_TOGGLES)
+
+showKillZones = input.bool(true, "Enable/Disable Kill Zones", tooltip="Master toggle for all kill zone displays", group=GRP_QUICK_TOGGLES)
+
+show_prev_periods = input.bool(true, "Enable/Disable Previous Period H/L", tooltip="Master toggle for daily/weekly/monthly high/low lines", group=GRP_QUICK_TOGGLES)
+
+show_htf_candles = input.bool(true, "Enable/Disable HTF Candles", tooltip="Master toggle for all HTF candle displays", group=GRP_QUICK_TOGGLES)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATERMARK SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
 
 // Content Settings
 
@@ -130,8 +143,6 @@ status_bg_transp = input.int(85, "Background Transparency", minval=0, maxval=100
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Session Configuration
-showSessions = input.bool(true, "Enable/Disable Sessions", tooltip="Master toggle for all session displays", group=GRP_SESSIONS)
-
 show_asian = input.bool(true, "", inline="sess_asian", group=GRP_SESSIONS)
 asian_txt = input.string("As", "", inline="sess_asian", group=GRP_SESSIONS)
 asian_ses = input.session("1900-0400", "", inline="sess_asian", tooltip="Asian session time range in HHMM-HHMM format", group=GRP_SESSIONS)
@@ -173,7 +184,6 @@ session_label_position = input.string("Above", "Label Position", options=["Right
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Kill Zone Configuration
-showKillZones = input.bool(true, "Enable/Disable Kill Zones", tooltip="Master toggle for all kill zone displays", group=GRP_KILLZONES)
 show_kz_text = input.bool(true, "Display Text Labels", tooltip="Show text labels on kill zones", group=GRP_KILLZONES)
 
 use_asian_kz = input.bool(true, "", inline="kz_asian", group=GRP_KILLZONES)
@@ -212,8 +222,6 @@ kz_text_transp = input.int(TRANSP_KILLZONE_TEXT, "Text Transparency", minval=0, 
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Period Configuration
-show_prev_periods = input.bool(true, "Enable/Disable Previous Period H/L", tooltip="Master toggle for daily/weekly/monthly high/low lines", group=GRP_PREV_PERIODS)
-
 show_daily_hl = input.bool(true, "Daily H/L", inline="period01", tooltip="Previous daily high/low", group=GRP_PREV_PERIODS)
 daily_lookback = input.int(1, "Lookback", inline="period01", minval=1, maxval=10, tooltip="Number of previous days to display", group=GRP_PREV_PERIODS)
 
@@ -403,8 +411,6 @@ color color_transparent = #ffffff00
 // ══════════════════════════════════════════════════════════════════════════════
 // HTF CANDLES - INPUT SETTINGS
 // ══════════════════════════════════════════════════════════════════════════════
-
-show_htf_candles = input.bool(true, "Enable/Disable HTF Candles", tooltip="Master toggle for all HTF candle displays", group=GRP_HTF)
 
 htf1.settings.show := input.bool(true, 'HTF 1', inline='htf1', group=GRP_HTF_SLOTS)
 htf_1 = input.timeframe('5', '', inline='htf1', group=GRP_HTF_SLOTS)
@@ -1307,7 +1313,7 @@ int htf_cnt = 0
 int htf_last = HTFEnabled()
 int htf_offset = htf_settings.offset
 
-if htf1.settings.show and ValidTimeframe(htf1.settings.htf)
+if show_htf_candles and htf1.settings.show and ValidTimeframe(htf1.settings.htf)
     bool showTrace = false
     if htf_settings.trace_anchor == 'First Timeframe'
         showTrace := true
@@ -1321,7 +1327,7 @@ if htf1.settings.show and ValidTimeframe(htf1.settings.htf)
     htf_offset := htf_offset + (htf_cnt > 0 ? htf1.candles.size() * htf_settings.width + (htf1.candles.size() > 0 ? (htf1.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
     htf_offset
 
-if htf2.settings.show and ValidTimeframe(htf2.settings.htf) and htf_cnt < htf_last
+if show_htf_candles and htf2.settings.show and ValidTimeframe(htf2.settings.htf) and htf_cnt < htf_last
     bool showTrace = false
     if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
         showTrace := true
@@ -1335,7 +1341,7 @@ if htf2.settings.show and ValidTimeframe(htf2.settings.htf) and htf_cnt < htf_la
     htf_offset := htf_offset + (htf_cnt > 0 ? htf2.candles.size() * htf_settings.width + (htf2.candles.size() > 0 ? (htf2.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
     htf_offset
 
-if htf3.settings.show and ValidTimeframe(htf3.settings.htf) and htf_cnt < htf_last
+if show_htf_candles and htf3.settings.show and ValidTimeframe(htf3.settings.htf) and htf_cnt < htf_last
     bool showTrace = false
     if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
         showTrace := true
@@ -1349,7 +1355,7 @@ if htf3.settings.show and ValidTimeframe(htf3.settings.htf) and htf_cnt < htf_la
     htf_offset := htf_offset + (htf_cnt > 0 ? htf3.candles.size() * htf_settings.width + (htf3.candles.size() > 0 ? (htf3.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
     htf_offset
 
-if htf4.settings.show and ValidTimeframe(htf4.settings.htf) and htf_cnt < htf_last
+if show_htf_candles and htf4.settings.show and ValidTimeframe(htf4.settings.htf) and htf_cnt < htf_last
     bool showTrace = false
     if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
         showTrace := true
@@ -1363,7 +1369,7 @@ if htf4.settings.show and ValidTimeframe(htf4.settings.htf) and htf_cnt < htf_la
     htf_offset := htf_offset + (htf_cnt > 0 ? htf4.candles.size() * htf_settings.width + (htf4.candles.size() > 0 ? (htf4.candles.size() - 1) * htf_settings.buffer : 0) + htf_settings.htf_buffer : 0)
     htf_offset
 
-if htf5.settings.show and ValidTimeframe(htf5.settings.htf) and htf_cnt < htf_last
+if show_htf_candles and htf5.settings.show and ValidTimeframe(htf5.settings.htf) and htf_cnt < htf_last
     bool showTrace = false
     if htf_settings.trace_anchor == 'First Timeframe' and htf_cnt == 0
         showTrace := true

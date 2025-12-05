@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.0] - 2025-12-05
+
+### Added
+- **Quick Toggles Section**: New dedicated input group at top of settings panel for instant feature control
+  - All 5 master feature toggles grouped together: Watermark, Sessions, Kill Zones, Previous Period, HTF Candles
+  - Appears first when settings panel opens - no scrolling required
+  - Eliminates need to navigate through individual feature groups to toggle features
+  - Significantly faster workflow: 2 clicks instead of 3+ clicks per toggle
+  - Optimized for traders who frequently enable/disable features
+
+### Fixed
+- **HTF Candles Master Toggle**: Fixed bug where `show_htf_candles` toggle was defined but never enforced
+  - Master toggle now properly controls all 5 HTF slot rendering blocks
+  - HTF candles now respect both master toggle AND individual slot toggles
+  - Ensures consistent behavior with other features (Watermark, Sessions, Kill Zones, Previous Period)
+
+### Changed
+- **Settings Organization**: Reorganized input structure for improved user experience
+  - Quick Toggles group appears at top (after Global Settings)
+  - Master toggles removed from individual feature groups (Watermark, Sessions, etc.)
+  - Individual feature groups now contain only detailed configuration settings
+  - Cleaner separation between "enable/disable" vs "configure" functionality
+
+### Technical Details
+- New input group constant: `GRP_QUICK_TOGGLES = "═══ QUICK TOGGLES ═══"`
+- Moved 5 master toggle inputs to Quick Toggles group (lines 91-99)
+- Removed duplicate toggle declarations from original feature groups
+- Added master toggle enforcement to HTF rendering logic (lines 1316, 1330, 1344, 1358, 1372)
+- Pine Script v6 compliance maintained (all single-line function calls)
+- Total code changes: ~20 lines modified, 5 lines moved
+
+---
+
 ## [3.3.1] - 2025-12-05
 
 ### Added
