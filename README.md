@@ -1,6 +1,6 @@
 # 📊 One for All - TradingView All-in-One Indicator
 
-**Version**: 3.2.1
+**Version**: 3.3.1
 **Author**: theCodeman
 **Platform**: TradingView
 **Language**: Pine Script v6
@@ -14,6 +14,7 @@
 ### Why "One for All"?
 
 This indicator eliminates the need for multiple separate indicators by combining:
+- ✅ **Status Dashboard** - Quick visual reference for enabled features (NEW in v3.3.1)
 - ✅ **Customizable Watermark** - Track your setups and trading plans
 - ✅ **Session & Kill Zone Visualization** - Asian, London, and NY sessions with kill zones
 - ✅ **Previous Period Levels** - Daily, Weekly, and Monthly highs/lows
@@ -30,6 +31,19 @@ This indicator eliminates the need for multiple separate indicators by combining
 - **Custom Text**: Add trading plan, bias, key levels, or any notes
 - **Full Style Control**: Color, transparency, size, and position
 - **Performance Optimized**: Single table instance, minimal CPU usage
+
+### 🎯 Status Dashboard (NEW in v3.3.1)
+- **Quick Visual Reference**: See at-a-glance which features are enabled/disabled
+- **Real-Time Indicators**: Color-coded checkmarks (✓/✗) for all 5 main features
+  - Watermark
+  - Sessions
+  - Kill Zones
+  - Previous Period
+  - HTF Candles
+- **9 Position Options**: Top/Middle/Bottom × Left/Center/Right
+- **Customizable Appearance**: Adjustable background transparency (0-100)
+- **Zero Performance Cost**: Updates only once per bar, uses only 1 drawing object
+- **Optional Display**: Disabled by default - enable via settings when needed
 
 ### 🌏 Session & Kill Zone Visualization
 - **Three Major Sessions**: Asian, London, and New York

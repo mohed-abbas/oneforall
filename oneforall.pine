@@ -2,105 +2,41 @@
 indicator("One for All", shorttitle="OFA", overlay=true, max_lines_count=500, max_boxes_count=500, max_labels_count=500)
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ONE FOR ALL - TradingView All-in-One Indicator
-// Phase 3B: Higher Timeframe Candles Complete
+// ONE FOR ALL - ICT-Focused TradingView Indicator
+// ══════════════════════════════════════════════════════════════════════════════
+// Version: 3.3.1 | Author: theCodeman | Date: 2025-12-05
 //
-// Purpose: ICT-focused trading indicator with sessions, kill zones, period levels, and HTF candles
-// Version: 3.3.0
-// Author: theCodeman
-// Date: 2025-12-02
+// PURPOSE: All-in-one indicator for Inner Circle Trader (ICT) analysis with
+// sessions, kill zones, previous period levels, and higher timeframe candles.
 //
-// Major Changes in v3.3.0:
-// - Updated default values: Drawing limit = 1, session names shortened (As/Lo/NY)
-// - Enhanced toggle labels for clarity (Enable/Disable prefix)
-// - New watermark defaults: Title="Name", Subtitles="Patience/Confidence/Execution"
-// - Updated session times: Asia 1900-0400, London 0300-1200, NY 0800-1600
-// - Session style defaults: Above label position, Dotted lines, width=1
-// - Killzone colors standardized to black (except NY Lunch)
-// - Period H/L defaults: lookback=1, only Daily enabled, black/dashed/width=1
-// - Removed gradient effect feature for cleaner visualization
+// CURRENT STATUS: Phase 3B Complete (HTF Candles with FVG/VI detection)
 //
-// Bug Fix in v3.2.1:
-// - Fixed HTF visibility on non-divisible timeframes (e.g., M5 now shows on M3 chart)
-// - Simplified ValidTimeframe() logic to show all higher timeframes
+// KEY FEATURES:
+// • Customizable watermark with symbol/timeframe display
+// • Status Dashboard with quick visual reference for enabled features (NEW in v3.3.1)
+// • Trading sessions (Asian/London/NY) with high/low tracking
+// • Kill zones with customizable time ranges
+// • Previous period H/L lines (Daily/Weekly/Monthly) with custom styles
+// • Higher timeframe candles (5 slots) with FVG/VI detection and trace lines
+// • HTF timer and interval labels with custom daily open options
 //
-// Major Changes in v3.2.0 (Phase 3B):
-// - Added 5 configurable HTF candle slots (5m, 15m, 1H, 4H, Daily)
-// - Fair Value Gap (FVG) detection and visualization
-// - Volume Imbalance (VI) detection and visualization
-// - Trace lines connecting HTF OHLC to formation bars
-// - HTF timer showing remaining time until candle close
-// - Interval value labels (day of week, time)
-// - Custom daily candle open options (Midnight, 8:30, 9:30)
-// - Flexible layout system (offset, buffer, spacing controls)
-// - Independent toggle for each HTF slot
-// - HTF name and timer labels with position control
-// - User timezone integration (uses gmt_tz from settings)
+// PHASE COMPLETION:
+// ✓ Phase 1: Watermark foundation
+// ✓ Phase 2: Sessions & kill zones
+// ✓ Phase 3: Previous period H/L with custom styles
+// ✓ Phase 3B: HTF candles with FVG/VI detection
+// ○ Phase 3C: Market structure (liquidity zones, order blocks) - Planned
 //
-// Bug Fix in v3.1.1:
-// - Fixed off-by-one error in array size management (lookback + 1 → lookback)
-// - Now correctly displays N periods when lookback is set to N (was showing N+1)
+// RECENT UPDATES (v3.3.1):
+// • NEW: Status Dashboard - Quick visual reference showing enabled/disabled features
+// • Real-time status indicators for: Watermark, Sessions, Kill Zones, Previous Period, HTF Candles
+// • Color-coded checkmarks (✓ green = enabled, ✗ red = disabled)
+// • 9 customizable positions (Top/Middle/Bottom Left/Center/Right)
+// • Customizable background transparency (0-100)
+// • Zero performance impact - updates only on last bar, uses only 1 drawing object
 //
-// Major Changes in v3.1.0:
-// - Added customizable label text for period H/L (PDH, PDL, PWH, PWL, PMH, PML)
-// - Added label position control (Left/Right)
-// - Labels now support gradient effect alongside lines
-// - Independent label array management with drawing limits
-// - Labels update dynamically with current bar position
-//
-// Major Changes in v3.0.0:
-// - Added Daily/Weekly/Monthly High/Low lines
-// - User-selectable line styles (Solid, Dashed, Dotted) for each period
-// - Customizable line widths (1-5) per period
-// - Lookback controls (show last N periods)
-// - Optional gradient effect for recency visualization
-// - Array-based period tracking with drawing limits
-// - Automatic timeframe detection for appropriate display
-//
-// Phase 1 Features (Completed):
-// - Customizable watermark overlay with dual-line display
-// - Symbol and timeframe display
-// - Custom subtitle cells
-// - Full style customization (color, size, position, transparency)
-// - Auto-refresh on symbol/timeframe changes
-// - Performance optimized (single table instance)
-//
-// Phase 2 Features (Completed):
-// - Asian, London, and New York trading sessions
-// - Universal timezone selector (GMT-12 to GMT+14)
-// - Session high/low horizontal lines with labels
-// - Session open/close markers (vertical lines)
-// - Kill zone boxes with session string inputs
-// - Optional session background boxes
-// - Full customization for all sessions and kill zones
-// - Independent toggle controls for each element
-// - Multi-day kill zone history tracking
-// - Drawing limit management
-//
-// Phase 3 Features (Completed):
-// - Daily/Weekly/Monthly previous period high/low lines
-// - Customizable line styles per period (Solid/Dashed/Dotted)
-// - Independent line width control (1-5)
-// - Lookback period controls (last N periods)
-// - Optional gradient effect for older periods
-// - Automatic timeframe-based display
-// - Customizable label text per period (v3.1.0)
-// - Label position control and gradient support (v3.1.0)
-//
-// Phase 3B Features (Completed):
-// - 5 configurable HTF candle slots (5m, 15m, 1H, 4H, Daily)
-// - Fair Value Gap (FVG) detection and visualization
-// - Volume Imbalance (VI) detection and visualization
-// - Trace lines connecting HTF OHLC to formation bars
-// - HTF timer showing remaining time until candle close
-// - Interval value labels (day of week, time)
-// - Custom daily candle open options (Midnight, 8:30, 9:30)
-// - Flexible layout system (offset, buffer, spacing controls)
-//
-// Future Roadmap:
-// - Phase 3C: Market structure, liquidity zones, order blocks
-// - Phase 4: Alerts, widgets, presets
-// - Phase 5: Full trading suite & themes
+// For detailed version history, see CHANGELOG.md
+// For development guide, see CLAUDE.md
 // ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -125,7 +61,18 @@ var string GRP_HTF_STYLE = "HTF Candle Style"
 var string GRP_HTF_LABELS = "HTF Label Settings"
 var string GRP_HTF_IMBALANCE = "HTF Imbalance Detection"
 var string GRP_HTF_TRACE = "HTF Trace Lines"
+var string GRP_STATUS_DASHBOARD = "═══ STATUS DASHBOARD ═══"
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Default transparency values
+var int TRANSP_WATERMARK = 50
+var int TRANSP_KILLZONE_BOX = 70
+var int TRANSP_KILLZONE_TEXT = 50
+var int TRANSP_SESSION_BG = 90
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GLOBAL SETTINGS
@@ -140,16 +87,10 @@ gmt_tz = input.string('GMT-5', "Timezone", options=['GMT-12','GMT-11','GMT-10','
 // WATERMARK SETTINGS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WATERMARK - Display Toggle
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Display Toggle
 showWatermark = input.bool(true, "Enable/Disable Watermark", tooltip="Toggle watermark visibility on/off", group=GRP_WATERMARK)
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WATERMARK - Content Settings (Line 1: Title)
-// ─────────────────────────────────────────────────────────────────────────────
+// Content Settings
 
 titleText = input.string("Name", "Title Text", tooltip="Custom title text for line 1", group=GRP_WATERMARK_CONTENT)
 
@@ -157,24 +98,16 @@ showSymbol = input.bool(true, "Show Symbol", inline="content01", tooltip="Displa
 
 showTimeframe = input.bool(true, "Show Timeframe", inline="content01", tooltip="Display current chart timeframe in title", group=GRP_WATERMARK_CONTENT)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WATERMARK - Content Settings (Line 2: Subtitles)
-// ─────────────────────────────────────────────────────────────────────────────
-
 subtitle1 = input.string("Patience", "Subtitle 1", inline="content02", tooltip="First subtitle cell", group=GRP_WATERMARK_CONTENT)
 
 subtitle2 = input.string("Confidence", "Subtitle 2", inline="content02", tooltip="Second subtitle cell", group=GRP_WATERMARK_CONTENT)
 
 subtitle3 = input.string("Execution", "Subtitle 3", inline="content02", tooltip="Third subtitle cell", group=GRP_WATERMARK_CONTENT)
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WATERMARK - Style Settings
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Style Settings
 textColor = input.color(color.new(color.white, 0), "Text Color", inline="style01", tooltip="Choose watermark text color", group=GRP_WATERMARK_STYLE)
 
-transparency = input.int(50, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_WATERMARK_STYLE)
+transparency = input.int(TRANSP_WATERMARK, "Transparency", minval=0, maxval=100, inline="style01", tooltip="0 = fully opaque, 100 = fully transparent", group=GRP_WATERMARK_STYLE)
 
 fontSize = input.string(size.normal, "Font Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], inline="style02", tooltip="Select watermark text size", group=GRP_WATERMARK_STYLE)
 
@@ -182,48 +115,47 @@ position = input.string("Center", "Position", options=["Left", "Center", "Right"
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// STATUS DASHBOARD SETTINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+show_status_dashboard = input.bool(false, "Enable Status Dashboard", tooltip="Display a quick reference box showing which features are currently enabled/disabled", group=GRP_STATUS_DASHBOARD)
+
+status_position = input.string("Bottom Right", "Position", options=["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Center", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"], tooltip="Choose where to display the status dashboard on your chart", group=GRP_STATUS_DASHBOARD)
+
+status_bg_transp = input.int(85, "Background Transparency", minval=0, maxval=100, tooltip="Adjust background transparency (0=opaque, 100=invisible)", group=GRP_STATUS_DASHBOARD)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // SESSIONS SETTINGS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SESSIONS - Display Toggles and Session Strings
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Session Configuration
 showSessions = input.bool(true, "Enable/Disable Sessions", tooltip="Master toggle for all session displays", group=GRP_SESSIONS)
 
-// Asian Session
 show_asian = input.bool(true, "", inline="sess_asian", group=GRP_SESSIONS)
 asian_txt = input.string("As", "", inline="sess_asian", group=GRP_SESSIONS)
 asian_ses = input.session("1900-0400", "", inline="sess_asian", tooltip="Asian session time range in HHMM-HHMM format", group=GRP_SESSIONS)
 asian_css = input.color(color.new(color.yellow, 0), "", inline="sess_asian", group=GRP_SESSIONS)
 
-// London Session
 show_london = input.bool(true, "", inline="sess_london", group=GRP_SESSIONS)
 london_txt = input.string("Lo", "", inline="sess_london", group=GRP_SESSIONS)
 london_ses = input.session("0300-1200", "", inline="sess_london", tooltip="London session time range in HHMM-HHMM format", group=GRP_SESSIONS)
 london_css = input.color(color.new(color.blue, 0), "", inline="sess_london", group=GRP_SESSIONS)
 
-// New York Session
 show_ny = input.bool(true, "", inline="sess_ny", group=GRP_SESSIONS)
 ny_txt = input.string("NY", "", inline="sess_ny", group=GRP_SESSIONS)
 ny_ses = input.session("0800-1600", "", inline="sess_ny", tooltip="New York session time range in HHMM-HHMM format", group=GRP_SESSIONS)
 ny_css = input.color(color.new(color.green, 0), "", inline="sess_ny", group=GRP_SESSIONS)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SESSIONS - Display Options
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Display Options
 show_session_range = input.bool(true, "Session Ranges", inline="sess_opt01", tooltip="Show session high/low boxes", group=GRP_SESSIONS)
 show_session_highs = input.bool(true, "High/Low Lines", inline="sess_opt01", tooltip="Show horizontal lines at session highs and lows", group=GRP_SESSIONS)
 
 show_session_open = input.bool(false, "Open Markers", inline="sess_opt02", tooltip="Mark session open with vertical line", group=GRP_SESSIONS)
 show_session_close = input.bool(false, "Close Markers", inline="sess_opt02", tooltip="Mark session close with vertical line", group=GRP_SESSIONS)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SESSIONS - Style Settings
-// ─────────────────────────────────────────────────────────────────────────────
-
-session_bg_transp = input.int(90, "Range Transparency", minval=0, maxval=100, tooltip="Session box background transparency", group=GRP_SESSION_STYLE)
+// Style Settings
+session_bg_transp = input.int(TRANSP_SESSION_BG, "Range Transparency", minval=0, maxval=100, tooltip="Session box background transparency", group=GRP_SESSION_STYLE)
 
 show_session_outline = input.bool(true, "Range Outline", tooltip="Show border on session range boxes", group=GRP_SESSION_STYLE)
 
@@ -240,60 +172,46 @@ session_label_position = input.string("Above", "Label Position", options=["Right
 // KILL ZONES SETTINGS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────────────────────────────────────
-// KILL ZONES - Display Toggles and Session Strings
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Kill Zone Configuration
 showKillZones = input.bool(true, "Enable/Disable Kill Zones", tooltip="Master toggle for all kill zone displays", group=GRP_KILLZONES)
 show_kz_text = input.bool(true, "Display Text Labels", tooltip="Show text labels on kill zones", group=GRP_KILLZONES)
 
-// Asian Kill Zone
 use_asian_kz = input.bool(true, "", inline="kz_asian", group=GRP_KILLZONES)
 asian_kz_txt = input.string("Asia", "", inline="kz_asian", group=GRP_KILLZONES)
 asian_kz_ses = input.session("2000-0000", "", inline="kz_asian", tooltip="Asian kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
 asian_kz_css = input.color(color.new(color.black, 0), "", inline="kz_asian", group=GRP_KILLZONES)
 
-// London Kill Zone
 use_london_kz = input.bool(true, "", inline="kz_london", group=GRP_KILLZONES)
 london_kz_txt = input.string("London", "", inline="kz_london", group=GRP_KILLZONES)
 london_kz_ses = input.session("0300-0500", "", inline="kz_london", tooltip="London kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
 london_kz_css = input.color(color.new(color.black, 0), "", inline="kz_london", group=GRP_KILLZONES)
 
-// NY AM Kill Zone
 use_nyam_kz = input.bool(true, "", inline="kz_nyam", group=GRP_KILLZONES)
 nyam_kz_txt = input.string("NY AM", "", inline="kz_nyam", group=GRP_KILLZONES)
 nyam_kz_ses = input.session("0930-1100", "", inline="kz_nyam", tooltip="NY AM kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
 nyam_kz_css = input.color(color.new(color.black, 0), "", inline="kz_nyam", group=GRP_KILLZONES)
 
-// NY Lunch Kill Zone
 use_nylu_kz = input.bool(true, "", inline="kz_nylu", group=GRP_KILLZONES)
 nylu_kz_txt = input.string("NY Lunch", "", inline="kz_nylu", group=GRP_KILLZONES)
 nylu_kz_ses = input.session("1200-1300", "", inline="kz_nylu", tooltip="NY Lunch kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
 nylu_kz_css = input.color(color.new(color.yellow, 0), "", inline="kz_nylu", group=GRP_KILLZONES)
 
-// NY PM Kill Zone
 use_nypm_kz = input.bool(true, "", inline="kz_nypm", group=GRP_KILLZONES)
 nypm_kz_txt = input.string("NY PM", "", inline="kz_nypm", group=GRP_KILLZONES)
 nypm_kz_ses = input.session("1330-1600", "", inline="kz_nypm", tooltip="NY PM kill zone time range in HHMM-HHMM format", group=GRP_KILLZONES)
 nypm_kz_css = input.color(color.new(color.black, 0), "", inline="kz_nypm", group=GRP_KILLZONES)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// KILL ZONES - Style Settings
-// ─────────────────────────────────────────────────────────────────────────────
+// Style Settings
+kz_box_transp = input.int(TRANSP_KILLZONE_BOX, "Box Transparency", minval=0, maxval=100, tooltip="Kill zone box transparency", group=GRP_KZ_STYLE)
 
-kz_box_transp = input.int(70, "Box Transparency", minval=0, maxval=100, tooltip="Kill zone box transparency", group=GRP_KZ_STYLE)
-
-kz_text_transp = input.int(50, "Text Transparency", minval=0, maxval=100, tooltip="Kill zone label transparency", group=GRP_KZ_STYLE)
+kz_text_transp = input.int(TRANSP_KILLZONE_TEXT, "Text Transparency", minval=0, maxval=100, tooltip="Kill zone label transparency", group=GRP_KZ_STYLE)
 
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PREVIOUS PERIOD H/L SETTINGS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PREVIOUS PERIODS - Display Toggles and Lookback Settings
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Period Configuration
 show_prev_periods = input.bool(true, "Enable/Disable Previous Period H/L", tooltip="Master toggle for daily/weekly/monthly high/low lines", group=GRP_PREV_PERIODS)
 
 show_daily_hl = input.bool(true, "Daily H/L", inline="period01", tooltip="Previous daily high/low", group=GRP_PREV_PERIODS)
@@ -305,10 +223,7 @@ weekly_lookback = input.int(1, "Lookback", inline="period02", minval=1, maxval=5
 show_monthly_hl = input.bool(false, "Monthly H/L", inline="period03", tooltip="Previous monthly high/low", group=GRP_PREV_PERIODS)
 monthly_lookback = input.int(1, "Lookback", inline="period03", minval=1, maxval=3, tooltip="Number of previous months to display", group=GRP_PREV_PERIODS)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PREVIOUS PERIODS - Style Settings (Customizable Line Styles)
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Style Settings
 daily_color = input.color(color.new(color.black, 0), "Daily Color", inline="color01", group=GRP_PREV_STYLE)
 weekly_color = input.color(color.new(color.black, 0), "Weekly Color", inline="color01", group=GRP_PREV_STYLE)
 monthly_color = input.color(color.new(color.black, 0), "Monthly Color", inline="color01", group=GRP_PREV_STYLE)
@@ -321,10 +236,7 @@ daily_line_width = input.int(1, "Daily Width", minval=1, maxval=5, inline="width
 weekly_line_width = input.int(1, "Weekly Width", minval=1, maxval=5, inline="width01", group=GRP_PREV_STYLE)
 monthly_line_width = input.int(1, "Monthly Width", minval=1, maxval=5, inline="width01", group=GRP_PREV_STYLE)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PREVIOUS PERIODS - Label Customization
-// ─────────────────────────────────────────────────────────────────────────────
-
+// Label Customization
 show_period_labels = input.bool(true, "Show Period Labels", tooltip="Display text labels for previous period high/low lines", group=GRP_PREV_STYLE)
 
 daily_high_label = input.string("PDH", "Daily High", inline="label01", tooltip="Label text for previous daily high", group=GRP_PREV_STYLE)
@@ -582,19 +494,17 @@ get_line_style() =>
 get_label_style() =>
     session_label_position == "Left" ? label.style_label_right : session_label_position == "Above" ? label.style_label_down : session_label_position == "Below" ? label.style_label_up : label.style_label_left
 
-// Get period line style constants
-get_daily_line_style() =>
-    daily_line_style == "Dashed" ? line.style_dashed : daily_line_style == "Dotted" ? line.style_dotted : line.style_solid
-
-get_weekly_line_style() =>
-    weekly_line_style == "Dashed" ? line.style_dashed : weekly_line_style == "Dotted" ? line.style_dotted : line.style_solid
-
-get_monthly_line_style() =>
-    monthly_line_style == "Dashed" ? line.style_dashed : monthly_line_style == "Dotted" ? line.style_dotted : line.style_solid
+// Get period line style constant from input
+get_period_line_style(style_input) =>
+    style_input == "Dashed" ? line.style_dashed : style_input == "Dotted" ? line.style_dotted : line.style_solid
 
 // Get period label style constant based on user selection
 get_period_label_style() =>
     period_label_position == "Left" ? label.style_label_right : label.style_label_left
+
+// Get status dashboard position constant from string input
+get_status_position(pos) =>
+    pos == "Top Left" ? position.top_left : pos == "Top Center" ? position.top_center : pos == "Top Right" ? position.top_right : pos == "Middle Left" ? position.middle_left : pos == "Middle Center" ? position.middle_center : pos == "Middle Right" ? position.middle_right : pos == "Bottom Left" ? position.bottom_left : pos == "Bottom Center" ? position.bottom_center : position.bottom_right
 
 // HTF Helper methods
 HTFLineStyle(string style) => style == '⎯⎯⎯' ? line.style_solid : style == '----' ? line.style_dashed : line.style_dotted
@@ -993,6 +903,52 @@ if barstate.islast
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// STATUS DASHBOARD - TABLE RENDERING
+// ══════════════════════════════════════════════════════════════════════════════
+
+var table statusTable = na
+
+if show_status_dashboard and barstate.islast
+    // Detect current feature states
+    watermark_enabled = showWatermark
+    sessions_enabled = showSessions
+    killzones_enabled = showKillZones
+    prev_period_enabled = show_daily_hl or show_weekly_hl or show_monthly_hl
+    htf_enabled = htf1.settings.show or htf2.settings.show or htf3.settings.show or htf4.settings.show or htf5.settings.show
+
+    // Create table if not exists
+    if na(statusTable)
+        statusTable := table.new(get_status_position(status_position), 2, 6)
+
+    // Background color with user-defined transparency
+    bg_color = color.new(color.gray, status_bg_transp)
+
+    // Header row (row 0)
+    table.cell(statusTable, 0, 0, "FEATURE STATUS", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 0, "", bgcolor=bg_color)
+
+    // Watermark row (row 1)
+    table.cell(statusTable, 0, 1, "Watermark", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 1, watermark_enabled ? "✓" : "✗", text_color=watermark_enabled ? color.green : color.red, text_size=size.normal, bgcolor=bg_color)
+
+    // Sessions row (row 2)
+    table.cell(statusTable, 0, 2, "Sessions", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 2, sessions_enabled ? "✓" : "✗", text_color=sessions_enabled ? color.green : color.red, text_size=size.normal, bgcolor=bg_color)
+
+    // Kill Zones row (row 3)
+    table.cell(statusTable, 0, 3, "Kill Zones", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 3, killzones_enabled ? "✓" : "✗", text_color=killzones_enabled ? color.green : color.red, text_size=size.normal, bgcolor=bg_color)
+
+    // Previous Period row (row 4)
+    table.cell(statusTable, 0, 4, "Previous Period", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 4, prev_period_enabled ? "✓" : "✗", text_color=prev_period_enabled ? color.green : color.red, text_size=size.normal, bgcolor=bg_color)
+
+    // HTF Candles row (row 5)
+    table.cell(statusTable, 0, 5, "HTF Candles", text_color=color.white, text_size=size.small, bgcolor=bg_color)
+    table.cell(statusTable, 1, 5, htf_enabled ? "✓" : "✗", text_color=htf_enabled ? color.green : color.red, text_size=size.normal, bgcolor=bg_color)
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // SESSION DETECTION (INSPIRATION APPROACH)
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1332,15 +1288,15 @@ var array<label> monthly_lo_labels = array.new<label>()
 if show_prev_periods
     // Daily H/L (only on intraday timeframes)
     if show_daily_hl and timeframe.isintraday
-        track_period_hl(has_daily_changed, daily_high, daily_low, is_last_daily, daily_lookback, daily_color, get_daily_line_style(), daily_line_width, daily_hi_lines, daily_lo_lines, daily_hi_labels, daily_lo_labels, daily_high_label, daily_low_label)
+        track_period_hl(has_daily_changed, daily_high, daily_low, is_last_daily, daily_lookback, daily_color, get_period_line_style(daily_line_style), daily_line_width, daily_hi_lines, daily_lo_lines, daily_hi_labels, daily_lo_labels, daily_high_label, daily_low_label)
 
     // Weekly H/L (on intraday and daily timeframes)
     if show_weekly_hl and (timeframe.isintraday or timeframe.isdaily)
-        track_period_hl(has_weekly_changed, weekly_high, weekly_low, is_last_weekly, weekly_lookback, weekly_color, get_weekly_line_style(), weekly_line_width, weekly_hi_lines, weekly_lo_lines, weekly_hi_labels, weekly_lo_labels, weekly_high_label, weekly_low_label)
+        track_period_hl(has_weekly_changed, weekly_high, weekly_low, is_last_weekly, weekly_lookback, weekly_color, get_period_line_style(weekly_line_style), weekly_line_width, weekly_hi_lines, weekly_lo_lines, weekly_hi_labels, weekly_lo_labels, weekly_high_label, weekly_low_label)
 
     // Monthly H/L (not on monthly timeframes)
     if show_monthly_hl and not timeframe.ismonthly
-        track_period_hl(has_monthly_changed, monthly_high, monthly_low, is_last_monthly, monthly_lookback, monthly_color, get_monthly_line_style(), monthly_line_width, monthly_hi_lines, monthly_lo_lines, monthly_hi_labels, monthly_lo_labels, monthly_high_label, monthly_low_label)
+        track_period_hl(has_monthly_changed, monthly_high, monthly_low, is_last_monthly, monthly_lookback, monthly_color, get_period_line_style(monthly_line_style), monthly_line_width, monthly_hi_lines, monthly_lo_lines, monthly_hi_labels, monthly_lo_labels, monthly_high_label, monthly_low_label)
 
 
 // ══════════════════════════════════════════════════════════════════════════════
